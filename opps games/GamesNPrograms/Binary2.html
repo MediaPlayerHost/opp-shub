@@ -1,0 +1,695 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Combinations: The Square Grid</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        darkbg: '#0f1117',
+                        panelbg: '#181b24',
+                        cardbg: '#212530',
+                        accent: '#00f0ff',
+                        neonred: '#ff3b5c',
+                        neonblue: '#0088ff'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f1117;
+            color: #f3f4f6;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Custom glow effects */
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+        }
+        .glow-red {
+            box-shadow: 0 0 25px rgba(255, 59, 92, 0.5);
+        }
+        .glow-blue {
+            box-shadow: 0 0 25px rgba(0, 136, 255, 0.5);
+        }
+
+        /* Animated grid background */
+        .bg-grid {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        /* Toast animation */
+        @keyframes toastIn {
+            0% { transform: translateY(-20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .animate-toast {
+            animation: toastIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Pulse animation for level button unlocked */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+            50% { box-shadow: 0 0 22px rgba(0, 240, 255, 0.8); }
+        }
+        .pulse-accent {
+            animation: pulseGlow 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-darkbg bg-grid min-h-screen flex flex-col font-sans overflow-x-hidden antialiased selection:bg-accent selection:text-black">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation Bar -->
+    <header class="w-full border-b border-gray-800 bg-panelbg/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <!-- Game Title & Concept -->
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neonred to-neonblue flex items-center justify-center font-mono font-extrabold text-white text-lg shadow-lg">
+                    2<sup>n</sup>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center gap-2">
+                        BINARY COMBINATIONS
+                        <span class="text-xs px-2 py-0.5 rounded bg-accent/10 border border-accent/30 text-accent font-mono font-semibold">THE SQUARE GRID</span>
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Level Selector Tabs -->
+            <div class="flex items-center bg-darkbg p-1 rounded-xl border border-gray-800" id="levelTabs">
+                <!-- Dynamically populated by JS -->
+            </div>
+
+            <!-- Global Action Controls -->
+            <div class="flex items-center space-x-2">
+                <button id="soundToggleBtn" onclick="toggleSound()" class="p-2.5 rounded-lg bg-cardbg border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white transition" title="Toggle Audio">
+                    <svg id="soundIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                    <svg id="soundIconOff" class="w-5 h-5 hidden text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                </button>
+                <button onclick="resetCurrentLevel()" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-cardbg border border-gray-700 hover:border-neonred hover:text-neonred text-gray-300 transition flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Reset Level
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="max-w-6xl w-full mx-auto px-4 py-6 flex-1 flex flex-col gap-6">
+
+        <!-- Info & Formula Header Banner -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Current Goal -->
+            <div class="bg-panelbg border border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wider text-gray-400">Current Level</div>
+                    <div class="text-xl font-extrabold text-white flex items-center gap-2 mt-0.5" id="levelTitleDisplay">
+                        Level 1
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-gray-400">Target</div>
+                    <div class="text-2xl font-mono font-bold text-accent" id="targetCountDisplay">0 / 2</div>
+                </div>
+            </div>
+
+            <!-- Mathematical Formula Breakdown -->
+            <div class="bg-panelbg border border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wider text-gray-400">Binary Power Formula</div>
+                    <div class="text-lg font-mono font-extrabold text-gray-200 mt-0.5" id="formulaText">
+                        2<sup>n</sup> = 2<sup>1</sup> = 2 combinations
+                    </div>
+                </div>
+                <div class="px-3 py-1.5 rounded-xl bg-darkbg border border-gray-800 font-mono text-xs text-accent font-semibold">
+                    BASE 2
+                </div>
+            </div>
+
+            <!-- Status & Keyboard Shortcuts Info -->
+            <div class="bg-panelbg border border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wider text-gray-400">Shortcut Controls</div>
+                    <div class="text-xs font-medium text-gray-300 mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span>Click squares or press</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-darkbg border border-gray-700 font-mono text-accent">1-4</kbd>
+                        <span>&amp; press</span>
+                        <kbd class="px-2 py-0.5 rounded bg-darkbg border border-gray-700 font-mono text-accent">SPACE</kbd>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Playground & Submissions Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Left Panel: Interactive Square Controls -->
+            <div class="lg:col-span-5 bg-panelbg border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[380px] shadow-xl relative overflow-hidden">
+                <!-- Background decorative radial glow -->
+                <div class="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent pointer-events-none"></div>
+
+                <div class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-accent animate-ping"></span>
+                    Configure Square States
+                </div>
+
+                <!-- Dynamic Square Grid Wrapper -->
+                <div id="interactiveGrid" class="flex flex-wrap items-center justify-center gap-4 my-2 max-w-full">
+                    <!-- Squares injected by JavaScript -->
+                </div>
+
+                <!-- Live Binary State & Decimal Representation -->
+                <div class="mt-6 w-full max-w-xs bg-darkbg border border-gray-800 rounded-xl p-3 flex items-center justify-between font-mono text-sm shadow-inner">
+                    <span class="text-gray-400 text-xs uppercase font-sans font-semibold">State:</span>
+                    <span id="binaryCodeDisplay" class="font-bold text-white tracking-widest text-base">R = 0</span>
+                    <span id="decimalDisplay" class="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded font-bold border border-accent/20">Val: 0</span>
+                </div>
+
+                <!-- Primary Submission Action Button -->
+                <button id="submitComboBtn" onclick="submitCurrentCombination()" class="mt-6 w-full max-w-xs py-3.5 px-6 rounded-xl font-bold text-darkbg bg-accent hover:bg-cyan-300 active:scale-95 transition duration-150 glow-cyan flex items-center justify-center gap-2 text-sm tracking-wide">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                    SUBMIT COMBINATION
+                </button>
+            </div>
+
+            <!-- Right Panel: Found Combinations Grid Drawer -->
+            <div class="lg:col-span-7 bg-panelbg border border-gray-800 rounded-2xl p-6 min-h-[380px] flex flex-col shadow-xl">
+                <div class="flex items-center justify-between pb-4 border-b border-gray-800 mb-5">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-extrabold text-gray-100 text-base uppercase tracking-wider">Discovered Combinations</h2>
+                        <span id="discoveredCountBadge" class="px-2.5 py-0.5 rounded-full bg-darkbg border border-gray-700 font-mono text-xs text-accent font-bold">0 / 2</span>
+                    </div>
+                    <span class="text-xs text-gray-400">Fill all slots to complete level</span>
+                </div>
+
+                <!-- Combinations Tiles Grid Container -->
+                <div id="combinationsDrawer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 flex-1 overflow-y-auto max-h-[360px] pr-1">
+                    <!-- Cards dynamically rendered here -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Educational Insight Footer Banner -->
+        <div class="bg-panelbg/60 border border-gray-800/80 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-gray-400">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 rounded-xl bg-accent/10 text-accent mt-0.5 sm:mt-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-200">Why does doubling happen?</h3>
+                    <p class="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                        Every single square added brings 2 possible choices (Red or Blue). Adding 1 extra square doubles all previous combinations because each existing set can now be paired with Red OR Blue!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Victory / Level Complete Modal Overlay -->
+    <div id="victoryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-panelbg border border-accent/40 rounded-3xl max-w-md w-full p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl transform scale-90 transition-all duration-300" id="victoryModalCard">
+            <!-- Icon Badge -->
+            <div class="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 text-accent flex items-center justify-center mb-4 glow-cyan">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+
+            <h2 class="text-2xl font-extrabold text-white tracking-tight" id="modalTitle">LEVEL CLEARED!</h2>
+            <p class="text-xs font-mono text-accent mt-1 uppercase tracking-widest font-semibold" id="modalSub">2<sup>n</sup> EXPONENTIAL GROWTH</p>
+
+            <!-- Educational Explanation Box -->
+            <div class="my-5 w-full bg-darkbg/90 border border-gray-800 rounded-2xl p-4 text-left text-xs space-y-2.5">
+                <div class="flex items-center justify-between text-gray-300 font-mono font-semibold border-b border-gray-800 pb-2">
+                    <span id="modalSquareCount">Squares (n): 1</span>
+                    <span id="modalMath">2<sup>1</sup> = 2 Combos</span>
+                </div>
+                <p class="text-gray-400 leading-relaxed" id="modalDescription">
+                    By having 1 square, you found all 2 possible outcomes (Red &amp; Blue).
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 w-full">
+                <button onclick="closeVictoryModal()" class="w-full py-3 rounded-xl border border-gray-700 hover:border-gray-500 font-bold text-gray-300 text-sm transition">
+                    Review Combinations
+                </button>
+                <button id="nextLevelBtn" onclick="advanceToNextLevel()" class="w-full py-3 rounded-xl bg-accent hover:bg-cyan-300 text-darkbg font-bold text-sm transition glow-cyan flex items-center justify-center gap-1.5">
+                    <span>Next Level</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Engine -->
+    <script>
+        // -------------------------------------------------------------
+        // GAME STATE MANAGEMENT
+        // -------------------------------------------------------------
+        const LEVELS = [
+            { id: 1, squares: 1, title: 'Level 1', label: '1 Square' },
+            { id: 2, squares: 2, title: 'Level 2', label: '2 Squares' },
+            { id: 3, squares: 3, title: 'Level 3', label: '3 Squares' },
+            { id: 4, squares: 4, title: 'Level 4', label: '4 Squares' },
+            { id: 5, squares: 5, title: 'Sandbox', label: '5 Squares (Sandbox)', isSandbox: true }
+        ];
+
+        let currentLevelIdx = 0;
+        let unlockedLevelIdx = 0;
+        let currentSquareStates = []; // Array of booleans: false = RED (0), true = BLUE (1)
+        let foundCombinations = new Set(); // Stores binary strings like "010"
+        let soundEnabled = true;
+
+        // -------------------------------------------------------------
+        // WEB AUDIO API SYNTHESIZER (No external sound files required)
+        // -------------------------------------------------------------
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+
+                if (type === 'toggle') {
+                    // Click/Pop synth sound
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'success') {
+                    // Upbeat discovery chime
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'duplicate') {
+                    // Low error buzz
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(120, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'victory') {
+                    // Level clear triumphant arpeggio
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const noteOsc = ctx.createOscillator();
+                        const noteGain = ctx.createGain();
+                        noteOsc.connect(noteGain);
+                        noteGain.connect(ctx.destination);
+
+                        noteOsc.type = 'sine';
+                        noteOsc.frequency.setValueAtTime(freq, now + (idx * 0.09));
+                        noteGain.gain.setValueAtTime(0.2, now + (idx * 0.09));
+                        noteGain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.09) + 0.3);
+
+                        noteOsc.start(now + (idx * 0.09));
+                        noteOsc.stop(now + (idx * 0.09) + 0.3);
+                    });
+                }
+            } catch (e) {
+                // Audio safely ignored if blocked by browser policy
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIconOn').classList.toggle('hidden', !soundEnabled);
+            document.getElementById('soundIconOff').classList.toggle('hidden', soundEnabled);
+            if (soundEnabled) playSound('toggle');
+        }
+
+        // -------------------------------------------------------------
+        // UI TOAST NOTIFICATIONS
+        // -------------------------------------------------------------
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgStyle = 'bg-cardbg border-gray-700 text-gray-200';
+            if (type === 'warning') bgStyle = 'bg-amber-950/90 border-amber-600/50 text-amber-200 glow-red';
+            if (type === 'success') bgStyle = 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200 glow-cyan';
+
+            toast.className = `px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-2xl flex items-center gap-2 animate-toast ${bgStyle}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2200);
+        }
+
+        // -------------------------------------------------------------
+        // CORE INITIALIZATION & LEVEL SWITCHING
+        // -------------------------------------------------------------
+        function initApp() {
+            renderLevelTabs();
+            loadLevel(0);
+
+            // Keyboard navigation listener
+            window.addEventListener('keydown', (e) => {
+                if (e.key >= '1' && e.key <= '5') {
+                    const idx = parseInt(e.key) - 1;
+                    if (idx < LEVELS[currentLevelIdx].squares) {
+                        toggleSquare(idx);
+                    }
+                } else if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    submitCurrentCombination();
+                }
+            });
+        }
+
+        function renderLevelTabs() {
+            const tabsContainer = document.getElementById('levelTabs');
+            tabsContainer.innerHTML = '';
+
+            LEVELS.forEach((lvl, idx) => {
+                const isUnlocked = idx <= unlockedLevelIdx;
+                const isActive = idx === currentLevelIdx;
+
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    isActive 
+                        ? 'bg-accent text-darkbg shadow-md' 
+                        : isUnlocked 
+                            ? 'text-gray-300 hover:text-white hover:bg-cardbg' 
+                            : 'text-gray-600 cursor-not-allowed opacity-60'
+                } ${isUnlocked && !isActive && idx === unlockedLevelIdx && idx > 0 ? 'pulse-accent' : ''}`;
+                
+                btn.disabled = !isUnlocked;
+                btn.onclick = () => {
+                    playSound('toggle');
+                    loadLevel(idx);
+                };
+
+                btn.innerHTML = `
+                    <span>${lvl.title}</span>
+                    ${!isUnlocked ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>' : ''}
+                `;
+
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const lvl = LEVELS[idx];
+
+            // Reset states
+            currentSquareStates = new Array(lvl.squares).fill(false); // All default to Red (0)
+            foundCombinations.clear();
+
+            // Update UI headers
+            document.getElementById('levelTitleDisplay').innerText = lvl.title;
+            const totalCombos = Math.pow(2, lvl.squares);
+            document.getElementById('targetCountDisplay').innerText = `0 / ${totalCombos}`;
+            document.getElementById('discoveredCountBadge').innerText = `0 / ${totalCombos}`;
+            document.getElementById('formulaText').innerHTML = `2<sup>${lvl.squares}</sup> = ${totalCombos} combinations`;
+
+            renderLevelTabs();
+            renderInteractiveGrid();
+            renderCombinationsDrawer();
+            updateStateReadout();
+        }
+
+        function resetCurrentLevel() {
+            playSound('toggle');
+            loadLevel(currentLevelIdx);
+            showToast("Level reset!", "info");
+        }
+
+        // -------------------------------------------------------------
+        // INTERACTIVE SQUARE GRID LOGIC
+        // -------------------------------------------------------------
+        function renderInteractiveGrid() {
+            const grid = document.getElementById('interactiveGrid');
+            grid.innerHTML = '';
+
+            currentSquareStates.forEach((isBlue, idx) => {
+                const btn = document.createElement('button');
+                btn.onclick = () => toggleSquare(idx);
+
+                // Styling based on Red (false / 0) vs Blue (true / 1)
+                const isRed = !isBlue;
+                btn.className = `w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 flex flex-col items-center justify-center font-mono transition-all duration-200 transform active:scale-90 relative ${
+                    isRed 
+                        ? 'bg-neonred/20 border-neonred text-neonred glow-red hover:bg-neonred/30' 
+                        : 'bg-neonblue/20 border-neonblue text-neonblue glow-blue hover:bg-neonblue/30'
+                }`;
+
+                btn.innerHTML = `
+                    <span class="absolute top-2 left-2 text.5xs font-sans font-bold text-gray-400 opacity-70">#${idx + 1}</span>
+                    <span class="text-2xl sm:text-3xl font-extrabold tracking-wider">${isRed ? 'R' : 'B'}</span>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full mt-1 ${isRed ? 'bg-neonred/30 text-red-200' : 'bg-neonblue/30 text-blue-200'}">
+                        ${isRed ? '0' : '1'}
+                    </span>
+                `;
+
+                grid.appendChild(btn);
+            });
+        }
+
+        function toggleSquare(index) {
+            getAudioContext();
+            playSound('toggle');
+            currentSquareStates[index] = !currentSquareStates[index];
+            renderInteractiveGrid();
+            updateStateReadout();
+        }
+
+        function updateStateReadout() {
+            const binaryStr = currentSquareStates.map(s => s ? '1' : '0').join('');
+            const letterStr = currentSquareStates.map(s => s ? 'B' : 'R').join(' | ');
+            const decimalVal = parseInt(binaryStr, 2);
+
+            document.getElementById('binaryCodeDisplay').innerText = `[ ${letterStr} ] = ${binaryStr}`;
+            document.getElementById('decimalDisplay').innerText = `Val: ${decimalVal}`;
+        }
+
+        // -------------------------------------------------------------
+        // SUBMISSION & COMBINATION DISCOVERY LOGIC
+        // -------------------------------------------------------------
+        function submitCurrentCombination() {
+            getAudioContext();
+            const binaryKey = currentSquareStates.map(s => s ? '1' : '0').join('');
+            const lvl = LEVELS[currentLevelIdx];
+            const totalCombos = Math.pow(2, lvl.squares);
+
+            if (foundCombinations.has(binaryKey)) {
+                playSound('duplicate');
+                showToast(`Already submitted [${binaryKey}]! Try toggling a square.`, 'warning');
+                return;
+            }
+
+            // New combination found!
+            playSound('success');
+            foundCombinations.add(binaryKey);
+
+            // Update UI count
+            const count = foundCombinations.size;
+            document.getElementById('targetCountDisplay').innerText = `${count} / ${totalCombos}`;
+            document.getElementById('discoveredCountBadge').innerText = `${count} / ${totalCombos}`;
+
+            renderCombinationsDrawer();
+            showToast(`New Combination Found! [${binaryKey}]`, 'success');
+
+            // Check if Level Cleared
+            if (count === totalCombos) {
+                setTimeout(() => {
+                    handleLevelVictory();
+                }, 400);
+            }
+        }
+
+        function renderCombinationsDrawer() {
+            const drawer = document.getElementById('combinationsDrawer');
+            drawer.innerHTML = '';
+
+            const lvl = LEVELS[currentLevelIdx];
+            const totalCombos = Math.pow(2, lvl.squares);
+            const foundArray = Array.from(foundCombinations);
+
+            for (let i = 0; i < totalCombos; i++) {
+                const card = document.createElement('div');
+                const isDiscovered = i < foundArray.length;
+
+                if (isDiscovered) {
+                    const comboStr = foundArray[i];
+                    const decimalVal = parseInt(comboStr, 2);
+
+                    card.className = "bg-darkbg border border-accent/30 rounded-xl p-3 flex flex-col items-center justify-between shadow-md transition duration-200 animate-toast";
+                    
+                    // Render mini color blocks
+                    let miniBlocksHtml = '<div class="flex items-center gap-1 my-1.5">';
+                    for (let char of comboStr) {
+                        const isBlue = char === '1';
+                        miniBlocksHtml += `
+                            <span class="w-3.5 h-3.5 rounded-sm ${isBlue ? 'bg-neonblue shadow-sm' : 'bg-neonred shadow-sm'}"></span>
+                        `;
+                    }
+                    miniBlocksHtml += '</div>';
+
+                    card.innerHTML = `
+                        <div class="w-full flex items-center justify-between text-[10px] font-mono text-gray-400">
+                            <span>#${i + 1}</span>
+                            <span class="text-accent">Val: ${decimalVal}</span>
+                        </div>
+                        ${miniBlocksHtml}
+                        <div class="font-mono text-xs font-bold text-gray-200 tracking-wider">${comboStr}</div>
+                    `;
+                } else {
+                    // Empty undiscovered slot
+                    card.className = "bg-darkbg/40 border border-dashed border-gray-800 rounded-xl p-3 flex flex-col items-center justify-center text-gray-600 min-h-[76px]";
+                    card.innerHTML = `
+                        <svg class="w-5 h-5 opacity-40 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span class="text-[10px] font-mono">Locked</span>
+                    `;
+                }
+
+                drawer.appendChild(card);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // VICTORY & ADVANCEMENT OVERLAY
+        // -------------------------------------------------------------
+        function handleLevelVictory() {
+            playSound('victory');
+
+            const lvl = LEVELS[currentLevelIdx];
+            const nextIdx = currentLevelIdx + 1;
+
+            if (nextIdx > unlockedLevelIdx && nextIdx < LEVELS.length) {
+                unlockedLevelIdx = nextIdx;
+                renderLevelTabs();
+            }
+
+            const modal = document.getElementById('victoryModal');
+            const modalCard = document.getElementById('victoryModalCard');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSub = document.getElementById('modalSub');
+            const modalSquareCount = document.getElementById('modalSquareCount');
+            const modalMath = document.getElementById('modalMath');
+            const modalDescription = document.getElementById('modalDescription');
+            const nextBtn = document.getElementById('nextLevelBtn');
+
+            modalSquareCount.innerText = `Squares (n): ${lvl.squares}`;
+            const totalCombos = Math.pow(2, lvl.squares);
+            modalMath.innerHTML = `2<sup>${lvl.squares}</sup> = ${totalCombos} Combos`;
+
+            if (lvl.squares === 1) {
+                modalTitle.innerText = "LEVEL 1 COMPLETE!";
+                modalSub.innerText = "2 POSSIBILITIES DISCOVERED";
+                modalDescription.innerHTML = "With <strong>1 square</strong>, you have 2 options: Red (0) or Blue (1).";
+            } else if (lvl.squares === 2) {
+                modalTitle.innerText = "LEVEL 2 COMPLETE!";
+                modalSub.innerText = "DOUBLED TO 4 POSSIBILITIES";
+                modalDescription.innerHTML = "Adding a 2nd square <strong>doubled</strong> your options from 2 to 4! Each choice of the first square now branches into Red or Blue.";
+            } else if (lvl.squares === 3) {
+                modalTitle.innerText = "LEVEL 3 COMPLETE!";
+                modalSub.innerText = "DOUBLED AGAIN TO 8!";
+                modalDescription.innerHTML = "A 3rd square doubles 4 into <strong>8 unique combinations</strong> ($2^3 = 8$). This is why 3-bit systems hold 8 unique states.";
+            } else if (lvl.squares === 4) {
+                modalTitle.innerText = "LEVEL 4 COMPLETE!";
+                modalSub.innerText = "16 COMBINATIONS UNLOCKED!";
+                modalDescription.innerHTML = "You found all 16 states ($2^4 = 16$). Double this repeatedly, and you get 32, 64, 128, 256, 512... and eventually Gigabytes of phone storage!";
+            } else {
+                modalTitle.innerText = "SANDBOX CLEARED!";
+                modalSub.innerText = "32 COMBINATIONS DISCOVERED!";
+                modalDescription.innerHTML = "You mastered 5 squares ($2^5 = 32$ combinations). You're officially a binary math wizard!";
+            }
+
+            if (currentLevelIdx < LEVELS.length - 1) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalCard.classList.remove('scale-90');
+            modalCard.classList.add('scale-100');
+        }
+
+        function closeVictoryModal() {
+            playSound('toggle');
+            const modal = document.getElementById('victoryModal');
+            const modalCard = document.getElementById('victoryModalCard');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalCard.classList.remove('scale-100');
+            modalCard.classList.add('scale-90');
+        }
+
+        function advanceToNextLevel() {
+            closeVictoryModal();
+            if (currentLevelIdx < LEVELS.length - 1) {
+                loadLevel(currentLevelIdx + 1);
+            }
+        }
+
+        // Initialize game on load
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
+```

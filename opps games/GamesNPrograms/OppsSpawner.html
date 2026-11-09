@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Block Is Hot: Spawner Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        #scaling-wrapper {
+            width: 850px;
+            height: 500px;
+            position: relative;
+            transform-origin: center center;
+            flex-shrink: 0;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #050505 70%, #222 100%);
+            border: 4px solid #ff3333;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(255, 51, 51, 0.4);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 30;
+            text-transform: uppercase;
+        }
+        .ui-element {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 6px 14px;
+            border-radius: 4px;
+            border: 1px solid #ff3333;
+        }
+
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 40;
+            pointer-events: none;
+        }
+        .spawn-btn {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: rgba(255, 51, 51, 0.2);
+            border: 3px solid rgba(255, 51, 51, 0.4);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            pointer-events: auto;
+            cursor: pointer;
+            backdrop-filter: blur(1px);
+        }
+        .spawn-btn:active { background: rgba(255, 51, 51, 0.5); }
+
+        #player {
+            position: absolute;
+            bottom: 30px;
+            left: 70px;
+            width: 50px;
+            height: 60px;
+            background-color: #3388ff;
+            border: 3px solid #fff;
+            border-radius: 5px;
+            transition: height 0.15s, background-color 0.1s;
+        }
+        #player.phone-mode {
+            background-color: #ffcc00;
+            height: 45px;
+        }
+        #player-face { position: absolute; top: 10px; right: 5px; font-size: 14px; }
+        
+        .threat { position: absolute; bottom: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+        .opp-foot { width: 50px; height: 60px; background-color: #ff3333; border: 3px solid #000; }
+        .opp-whip { bottom: 25px; width: 110px; height: 50px; background-color: #1a1111; border: 2px solid #ff3333; }
+        .fed-car { bottom: 25px; width: 120px; height: 55px; background-color: #002266; border: 2px solid #3388ff; }
+        .fed-lights { position: absolute; top: -10px; left: 50px; width: 20px; height: 10px; background: #ff0000; animation: flash-blue-red 0.15s infinite alternate; }
+        @keyframes flash-blue-red { from { background: #ff0000; } to { background: #0033ff; } }
+        .opp-spotter { width: 50px; height: 60px; background-color: #00ffff; border: 3px solid #000; }
+
+        #menu, #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 5, 0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            text-align: center;
+            padding: 20px;
+        }
+        #game-over { display: none; }
+        
+        h1 { color: #ff3333; font-size: 32px; margin-bottom: 10px; }
+        .rules-box { background: #161616; padding: 15px; border: 1px dashed #444; font-size: 13px; margin-bottom: 20px; text-align: left; }
+        #street { position: absolute; bottom: 0; width: 100%; height: 30px; background: #1a1a1a; border-top: 4px dashed #444; }
+        .threat-tag { position: absolute; top: -25px; font-size: 10px; white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+    <div id="scaling-wrapper">
+        <div id="game-container">
+            <div id="ui-layer">
+                <div class="ui-element">ROLE: SPAWNER</div>
+                <div class="ui-element">Sent: <span id="score-val">0</span></div>
+            </div>
+
+            <div id="touch-controls">
+                <div class="spawn-btn" id="btn-touch-spotter">SPAWN<br>BLUE</div>
+                <div class="spawn-btn" id="btn-touch-opp">SPAWN<br>RED</div>
+            </div>
+
+            <div id="street"></div>
+            <div id="player">
+                <div id="player-face">👁️</div>
+            </div>
+            <div id="spawn-layer"></div>
+
+            <div id="menu">
+                <h1>STREET LURKING:<br><span style="color: #a855f7;">GOD MODE SPAWNER</span></h1>
+                <div class="rules-box">
+                    <strong>CONTROLS:</strong><br>
+                    • 🔴 <strong>Right Alt</strong>: Spawn Opps (Red)<br>
+                    • 🔵 <strong>Left Alt</strong>: Spawn Feds/Spotters (Blue)<br>
+                    • 🌀 <strong>Space</strong>: Spawn Random<br><br>
+                    <label style="cursor:pointer; color:#00ffff;">
+                        <input type="checkbox" id="toggle-touch"> Enable Touch Buttons
+                    </label>
+                </div>
+                <button onclick="launchGame()" style="padding:15px 30px; background:#a855f7; color:white; border:none; cursor:pointer; font-weight:bold;">START THE CHAOS</button>
+            </div>
+
+            <div id="game-over">
+                <h1 id="over-title">CPU CAUGHT!</h1>
+                <p id="over-desc"></p>
+                <p style="font-size: 18px; margin: 15px 0;">Total Threats Sent: <span id="final-score">0</span></p>
+                <button onclick="launchGame()" style="padding:10px 20px; background:#a855f7; color:white; border:none;">Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wrapper = document.getElementById('scaling-wrapper');
+        const player = document.getElementById('player');
+        const playerFace = document.getElementById('player-face');
+        const scoreVal = document.getElementById('score-val');
+        const finalScore = document.getElementById('final-score');
+        const spawnLayer = document.getElementById('spawn-layer');
+        const menu = document.getElementById('menu');
+        const gameOverScreen = document.getElementById('game-over');
+        const touchControls = document.getElementById('touch-controls');
+        const toggleTouch = document.getElementById('toggle-touch');
+
+        let score = 0;
+        let gameActive = false;
+        let activeThreats = [];
+        let gameLoopTimer;
+        let cpuState = 'up'; 
+        let targetState = 'up';
+        let aiDelayTimer = 0;
+
+        function resizeGame() {
+            const scale = Math.min(window.innerWidth / 850, window.innerHeight / 500);
+            wrapper.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resizeGame);
+        resizeGame();
+
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.code === 'AltLeft') spawnEntity('forced');
+            if (e.code === 'AltRight') spawnEntity('original');
+            if (e.code === 'Space') spawnEntity(Math.random() > 0.5 ? 'original' : 'forced');
+        });
+
+        document.getElementById('btn-touch-spotter').addEventListener('pointerdown', (e) => { e.preventDefault(); spawnEntity('forced'); });
+        document.getElementById('btn-touch-opp').addEventListener('pointerdown', (e) => { e.preventDefault(); spawnEntity('original'); });
+
+        function launchGame() {
+            score = 0;
+            activeThreats.forEach(t => t.element.remove());
+            activeThreats = [];
+            scoreVal.textContent = '0';
+            menu.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            touchControls.style.display = toggleTouch.checked ? 'flex' : 'none';
+            cpuState = 'up';
+            targetState = 'up';
+            gameActive = true;
+            tick();
+        }
+
+        function spawnEntity(type) {
+            if (!gameActive) return;
+            const element = document.createElement('div');
+            element.className = 'threat';
+            
+            let baseSpeed = Math.random() * 3 + 4.5; 
+            let threat = { element: element, x: 860, speed: baseSpeed, requiredState: (type === 'original' ? 'up' : 'down'), name: '' };
+
+            if (type === 'original') {
+                if (Math.random() > 0.5) {
+                    threat.name = 'Opp Car'; threat.speed += 2.5; element.classList.add('opp-whip');
+                    element.innerHTML = '<span class="threat-tag" style="color: #ff3333;">⚠️ OPP WHIP</span>';
+                } else {
+                    threat.name = 'Foot Opp'; element.classList.add('opp-foot');
+                    element.innerHTML = '<div style="margin-top:12px;">🥷</div><span class="threat-tag" style="color: #ff3333;">⚠️ OPP</span>';
+                }
+            } else {
+                if (Math.random() > 0.5) {
+                    threat.name = 'Police'; threat.speed += 3; element.classList.add('fed-car');
+                    element.innerHTML = '<div class="fed-lights"></div><span class="threat-tag" style="color: #00ffff;">🚔 FEDS</span>';
+                } else {
+                    threat.name = 'Spotter'; element.classList.add('opp-spotter');
+                    element.innerHTML = '<div style="margin-top:12px;">👁️</div><span class="threat-tag" style="color: #00ffff;">⚠️ SPOTTER</span>';
+                }
+            }
+
+            element.style.left = threat.x + 'px';
+            spawnLayer.appendChild(element);
+            activeThreats.push(threat);
+            score++;
+            scoreVal.textContent = score;
+        }
+
+        function tick() {
+            if (!gameActive) return;
+
+            // --- BETTER CPU AI ---
+            // Look for nearest threat that is within 450px
+            let incoming = activeThreats
+                .filter(t => t.x > 110 && t.x < 450)
+                .sort((a, b) => a.x - b.x)[0];
+
+            let desired = incoming ? incoming.requiredState : 'up';
+
+            // If the desired state changes, start a small random delay (8-15 frames)
+            if (desired !== targetState) {
+                targetState = desired;
+                aiDelayTimer = Math.floor(Math.random() * 7) + 8; 
+            }
+
+            // Only switch physical state when delay runs out
+            if (aiDelayTimer > 0) {
+                aiDelayTimer--;
+            } else {
+                cpuState = targetState;
+            }
+
+            // Visual Application
+            if (cpuState === 'down') {
+                player.classList.add('phone-mode');
+                playerFace.textContent = '📱';
+            } else {
+                player.classList.remove('phone-mode');
+                playerFace.textContent = '👁️';
+            }
+
+            for (let i = activeThreats.length - 1; i >= 0; i--) {
+                let t = activeThreats[i];
+                t.x -= t.speed;
+                t.element.style.left = t.x + 'px';
+
+                // Hit Zone
+                if (t.x > 65 && t.x < 130) {
+                    if (t.requiredState === 'up' && cpuState === 'down') {
+                        endGame(t.name, "CPU was lacking and got caught!"); return;
+                    } else if (t.requiredState === 'down' && cpuState === 'up') {
+                        endGame(t.name, "CPU looked up and got spotted!"); return;
+                    }
+                    t.element.style.opacity = '0.3';
+                }
+
+                if (t.x < -150) {
+                    t.element.remove();
+                    activeThreats.splice(i, 1);
+                }
+            }
+
+            gameLoopTimer = requestAnimationFrame(tick);
+        }
+
+        function endGame(name, msg) {
+            gameActive = false;
+            cancelAnimationFrame(gameLoopTimer);
+            finalScore.textContent = score;
+            document.getElementById('over-desc').textContent = msg;
+            gameOverScreen.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>

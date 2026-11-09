@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heisenberg's Empire: Idle Laboratory</title>
+    <style>
+        :root {
+            --bg-color: #0b110e;
+            --panel-bg: #14211a;
+            --br-green: #4f772d;
+            --accent-blue: #00b4d8;
+            --text-light: #e0e0e0;
+            --text-dark: #111;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Breaking Bad Logo Style */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            font-weight: bold;
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+        }
+
+        .element-box {
+            background-color: var(--br-green);
+            color: var(--text-dark);
+            padding: 5px 12px;
+            margin: 0 4px;
+            display: inline-block;
+            line-height: 1;
+            text-align: left;
+            position: relative;
+            min-width: 45px;
+        }
+
+        .element-number {
+            font-size: 0.6rem;
+            position: absolute;
+            top: 2px;
+            left: 4px;
+        }
+
+        .element-symbol {
+            font-size: 2rem;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Layout */
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--br-green);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        h2 {
+            color: var(--br-green);
+            border-bottom: 1px solid var(--br-green);
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+
+        /* Stats Display */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .stat-card.money { border-left-color: #4caf50; }
+        .stat-card.heat { border-left-color: #f44336; }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Action Buttons */
+        .btn {
+            background-color: var(--br-green);
+            color: var(--text-dark);
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #90a955;
+        }
+
+        .btn:disabled {
+            background-color: #334139;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .btn-blue {
+            background-color: var(--accent-blue);
+            color: var(--text-dark);
+        }
+        .btn-blue:hover:not(:disabled) { background-color: #0077b6; }
+
+        .btn-danger {
+            background-color: #d90429;
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) { background-color: #ef233c; }
+
+        /* Upgrade Items */
+        .upgrade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .upgrade-info {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .upgrade-title {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .upgrade-cost {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .upgrade-btn {
+            width: auto;
+            margin-bottom: 0;
+            padding: 8px 15px;
+        }
+
+        /* Logs */
+        #log-box {
+            height: 120px;
+            background-color: #050806;
+            border: 1px solid #222;
+            padding: 10px;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            border-radius: 4px;
+            color: #a0a0a0;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            border-bottom: 1px linear-gradient(to right, #222, transparent);
+        }
+        .log-danger { color: #f44336; }
+        .log-success { color: #4caf50; }
+        .log-warning { color: #ffeb3b; }
+    </style>
+</head>
+<body>
+
+    <!-- Periodic Table Style Title Logo -->
+    <div class="logo-container">
+        <div class="element-box">
+            <span class="element-number">35</span>
+            <span class="element-symbol">Br</span>
+        </div>
+        eaking
+        <div class="element-box">
+            <span class="element-number">56</span>
+            <span class="element-symbol">Ba</span>
+        </div>
+        d Game
+    </div>
+
+    <div class="game-container">
+        
+        <!-- Top Banner Status Panel -->
+        <div class="panel full-width">
+            <h2>Underground Dashboard</h2>
+            <div class="stat-grid">
+                <div class="stat-card money">
+                    <div>Cash Cleaned</div>
+                    <div class="stat-value" id="stat-money">$0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Blue Product</div>
+                    <div class="stat-value" id="stat-product">0g</div>
+                </div>
+                <div class="stat-card">
+                    <div>Purity Rating</div>
+                    <div class="stat-value" id="stat-purity">50%</div>
+                </div>
+                <div class="stat-card heat">
+                    <div>DEA Heat</div>
+                    <div class="stat-value" id="stat-heat">0%</div>
+                </div>
+            </div>
+            <div id="log-box">
+                <div class="log-entry">"Let's cook." - Welcome to the empire. Keep your heat low and purity high.</div>
+            </div>
+        </div>
+
+        <!-- Left Operations Panel -->
+        <div class="panel">
+            <h2>Lab Operations</h2>
+            <button class="btn" id="btn-cook" onclick="cookBatch()">Cook Chemical Batch</button>
+            <button class="btn btn-blue" id="btn-sell" onclick="sellBatch()" disabled>Distribute Product via Jesse</button>
+            <button class="btn btn-danger" id="btn-saul" onclick="callSaul()" disabled>Call Saul (Bribe DEA -$1,000)</button>
+        </div>
+
+        <!-- Right Upgrades Panel -->
+        <div class="panel">
+            <h2>Empire Upgrades</h2>
+            
+            <div class="upgrade-item">
+                <div class="upgrade-info">
+                    <div class="upgrade-title">Methanol Supply Line</div>
+                    <div class="upgrade-cost" id="cost-supply">Cost: $150 | Yield +5g</div>
+                </div>
+                <button class="btn upgrade-btn" id="btn-upgrade-supply" onclick="buyUpgrade('supply')">Buy</button>
+            </div>
+
+            <div class="upgrade-item">
+                <div class="upgrade-info">
+                    <div class="upgrade-title">Glassware Upgrades</div>
+                    <div class="upgrade-cost" id="cost-purity">Cost: $300 | Purity +5%</div>
+                </div>
+                <button class="btn upgrade-btn" id="btn-upgrade-purity" onclick="buyUpgrade('purity')">Buy</button>
+            </div>
+
+            <div class="upgrade-item">
+                <div class="upgrade-info">
+                    <div class="upgrade-title">Hire Skinny Pete & Badger</div>
+                    <div class="upgrade-cost" id="cost-distribution">Cost: $800 | Auto-distribution</div>
+                </div>
+                <button class="btn upgrade-btn" id="btn-upgrade-dist" onclick="buyUpgrade('distribution')">Hire</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Game State Variables
+        let gameState = {
+            money: 0,
+            product: 0,
+            purity: 50,
+            heat: 0,
+            cookYield: 10,
+            prices: {
+                supply: 150,
+                purity: 300,
+                distribution: 800
+            },
+            upgrades: {
+                supplyLevel: 0,
+                purityLevel: 0,
+                hasDistribution: false
+            }
+        };
+
+        // DOM elements
+        const elMoney = document.getElementById('stat-money');
+        const elProduct = document.getElementById('stat-product');
+        const elPurity = document.getElementById('stat-purity');
+        const elHeat = document.getElementById('stat-heat');
+        const elLog = document.getElementById('log-box');
+        
+        const btnSell = document.getElementById('btn-sell');
+        const btnSaul = document.getElementById('btn-saul');
+
+        // Logic Loop
+        function updateUI() {
+            elMoney.innerText = `$${gameState.money.toLocaleString()}`;
+            elProduct.innerText = `${gameState.product}g`;
+            elPurity.innerText = `${gameState.purity}%`;
+            elHeat.innerText = `${Math.floor(gameState.heat)}%`;
+
+            // Enable/disable processing triggers
+            btnSell.disabled = gameState.product <= 0;
+            btnSaul.disabled = gameState.money < 1000 || gameState.heat === 0;
+
+            // Handle Upgrade buttons visibility/affordability
+            document.getElementById('btn-upgrade-supply').disabled = gameState.money < gameState.prices.supply;
+            document.getElementById('btn-upgrade-purity').disabled = gameState.money < gameState.prices.purity || gameState.purity >= 99;
+            
+            const distBtn = document.getElementById('btn-upgrade-dist');
+            if (gameState.upgrades.hasDistribution) {
+                distBtn.disabled = true;
+                distBtn.innerText = "Hired";
+            } else {
+                distBtn.disabled = gameState.money < gameState.prices.distribution;
+            }
+        }
+
+        function addLog(text, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+            elLog.appendChild(entry);
+            elLog.scrollTop = elLog.scrollHeight;
+        }
+
+        // Action Core Execution
+        function cookBatch() {
+            gameState.product += gameState.cookYield;
+            // High purity reduces heat gain slightly, sloppy setups gain heat faster
+            let heatGain = Math.max(2, 12 - (gameState.purity / 10));
+            gameState.heat += heatGain;
+            
+            addLog(`Cooked a new batch! Added +${gameState.cookYield}g of blue product.`, 'log-success');
+            checkHeatRisk();
+            updateUI();
+        }
+
+        function sellBatch() {
+            if (gameState.product <= 0) return;
+            
+            // Value scale built on volume & chemical purity
+            let pricePerGram = (gameState.purity / 50) * 15; 
+            let earnings = Math.floor(gameState.product * pricePerGram);
+            
+            gameState.money += earnings;
+            addLog(`Jesse traded away ${gameState.product}g product on the street. Cleared $${earnings}!`, 'log-warning');
+            
+            gameState.product = 0;
+            gameState.heat += 4; // Distribution draws street notice
+            
+            checkHeatRisk();
+            updateUI();
+        }
+
+        function callSaul() {
+            if (gameState.money >= 1000) {
+                gameState.money -= 1000;
+                gameState.heat = Math.max(0, gameState.heat - 35);
+                addLog("Saul Goodman cleaned your trails. DEA Heat decreased significantly!", 'log-success');
+                updateUI();
+            }
+        }
+
+        function buyUpgrade(type) {
+            if (type === 'supply' && gameState.money >= gameState.prices.supply) {
+                gameState.money -= gameState.prices.supply;
+                gameState.cookYield += 5;
+                gameState.prices.supply = Math.floor(gameState.prices.supply * 1.5);
+                document.getElementById('cost-supply').innerText = `Cost: $${gameState.prices.supply} | Yield +5g`;
+                addLog("Upgraded chemical supply lines. Batches yield more mass.", 'log-success');
+            } 
+            else if (type === 'purity' && gameState.money >= gameState.prices.purity) {
+                if (gameState.purity >= 99) return;
+                gameState.money -= gameState.prices.purity;
+                gameState.purity = Math.min(99, gameState.purity + 5);
+                gameState.prices.purity = Math.floor(gameState.prices.purity * 1.7);
+                document.getElementById('cost-purity').innerText = `Cost: $${gameState.prices.purity} | Purity +5%`;
+                addLog(`Lab equipment tuned. Chemical purity reaches ${gameState.purity}%!`, 'log-success');
+            } 
+            else if (type === 'distribution' && gameState.money >= gameState.prices.distribution) {
+                gameState.money -= gameState.prices.distribution;
+                gameState.upgrades.hasDistribution = true;
+                addLog("Corner crews active. Skinny Pete and Badger are distributing incrementally.", 'log-warning');
+            }
+            updateUI();
+        }
+
+        function checkHeatRisk() {
+            if (gameState.heat >= 100) {
+                addLog("CRITICAL: DEA RAID! Hank tracked your lab vectors. You lost half your uncleaned capital!", "log-danger");
+                gameState.money = Math.floor(gameState.money * 0.5);
+                gameState.product = 0;
+                gameState.heat = 20; 
+            }
+        }
+
+        // Auto Game Ticks
+        setInterval(() => {
+            let stateChanged = false;
+            
+            // Passive Distribution Crew processing
+            if (gameState.upgrades.hasDistribution && gameState.product > 0) {
+                let sellAmount = Math.min(gameState.product, 2);
+                let pricePerGram = (gameState.purity / 50) * 12;
+                let earnings = Math.floor(sellAmount * pricePerGram);
+                
+                gameState.product -= sellAmount;
+                gameState.money += earnings;
+                gameState.heat += 0.5; // slow passive heat trace
+                stateChanged = true;
+            }
+
+            // Natural ambient trace cooling down over time 
+            if (gameState.heat > 0) {
+                gameState.heat = Math.max(0, gameState.heat - 0.2);
+                stateChanged = true;
+            }
+
+            if (stateChanged) {
+                checkHeatRisk();
+                updateUI();
+            }
+        }, 1000);
+
+        // Run Init setup
+        updateUI();
+    </script>
+</body>
+</html>
+
+

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opp Avoider Hub</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        h1, h2 {
+            margin-top: 50px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            text-shadow: 2px 2px #ff0000;
+        }
+
+        /* Blue Section Wrapper */
+        .blue-section {
+            background-color: #000a7a;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 60px;
+            padding-bottom: 80px;
+        }
+
+        .section-divider {
+            font-size: 2rem;
+            color: #ffffff;
+            text-shadow: 2px 2px #000000;
+            border-top: 2px solid #ffffff;
+            width: 80%;
+            margin-top: 40px;
+            padding-top: 20px;
+        }
+
+        .hub-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            padding: 20px;
+            max-width: 1400px; /* Slightly widened to fit 4 cards nicely online */
+        }
+
+        .version-card {
+            width: 300px;
+            height: 480px;
+            border: 4px solid #1a1a1a;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: #111;
+        }
+
+        /* Restored Jump/Feedback Animation on Card Hover */
+        .version-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .red-hover:hover {
+            border-color: #ff0000;
+            box-shadow: 0 15px 40px rgba(255, 0, 0, 0.4);
+        }
+
+        .blue-hover:hover {
+            border-color: #ffffff;
+            box-shadow: 0 15px 40px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Backgrounds with Gradients */
+        .bg-2d { background: linear-gradient(to top, rgba(0,0,0,0.9), transparent), url('2dopps.png'); background-size: cover; }
+        .bg-3d { background: linear-gradient(to top, rgba(0,0,0,0.9), transparent), url('3dopps.png'); background-size: cover; }
+        .bg-god { background: linear-gradient(to top, rgba(0,0,0,1), rgba(255,0,0,0.3)); }
+        .bg-plat { background: linear-gradient(to top, rgba(0,0,0,0.9), transparent), url('plat_opps.png'); background-size: cover; } /* Matches 2D/3D gradient setup */
+        
+        .bg-media { background: linear-gradient(135deg, #2e2e2e 0%, #1a1a1a 100%); }
+        .bg-breaking { background: linear-gradient(135deg, #051a05 0%, #0a3d0a 100%); }
+        .bg-rhythm { background: linear-gradient(135deg, #000a7a 0%, #4b0082 100%); }
+
+        .text-group {
+            text-align: center;
+            margin-bottom: 25px;
+            z-index: 2;
+        }
+
+        .version-title {
+            font-weight: 900;
+            font-size: 2.2rem;
+            margin: 0;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .sub-red { color: #ff0000; }
+        .sub-blue { color: #00ccff; }
+
+        .btn {
+            color: white;
+            text-decoration: none;
+            padding: 12px 50px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            text-transform: uppercase;
+            z-index: 2;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-red { background-color: #ff0000; }
+        .btn-red:hover { background-color: #ffffff; color: #ff0000; transform: scale(1.05); }
+
+        .btn-blue { background-color: #000a7a; border: 1px solid white; }
+        .btn-blue:hover { background-color: #ffffff; color: #000a7a; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <h1>CHOOSE YOUR OPP AVOIDER VERSION</h1>
+
+    <div class="hub-container">
+        <div class="version-card bg-2d red-hover">
+            <div class="text-group">
+                <p class="version-title">2D VERSION</p>
+                <p class="subtitle sub-red">(ORIGINAL)</p>
+            </div>
+            <a href="GamesNPrograms/OppsRLurking.html" class="btn btn-red">PLAY</a>
+        </div>
+
+        <div class="version-card bg-3d red-hover">
+            <div class="text-group">
+                <p class="version-title">3D VERSION</p>
+                <p class="subtitle sub-red">LATEST</p>
+            </div>
+            <a href="GamesNPrograms/3DOpps.html" class="btn btn-red">PLAY</a>
+        </div>
+
+        <div class="version-card bg-god red-hover">
+            <div class="text-group">
+                <p class="version-title">GOD VERSION</p>
+                <p class="subtitle sub-red">EXPERIMENTAL</p>
+            </div>
+            <a href="GamesNPrograms/OppsSpawner.html" class="btn btn-red">PLAY</a>
+        </div>
+
+        <div class="version-card bg-plat red-hover">
+            <div class="text-group">
+                <p class="version-title">PLATFORMER</p>
+                <p class="subtitle sub-red">(OPPS ON PLATFORMS)</p>
+            </div>
+            <a href="GamesNPrograms/OppsPlat.html" class="btn btn-red">PLAY</a>
+        </div>
+    </div>
+
+    <div class="blue-section">
+        <h2 class="section-divider">-OTHERS-</h2>
+
+        <div class="hub-container">
+            <div class="version-card bg-media blue-hover">
+                <div class="text-group">
+                    <p class="version-title">MEDIA PLAYER</p>
+                    <p class="subtitle sub-blue">(PLAYS MUSIC)</p>
+                </div>
+                <a href="GamesNPrograms/GalleryRep.html" class="btn btn-blue">LAUNCH</a>
+            </div>
+
+            <div class="version-card bg-breaking blue-hover">
+                <div class="text-group">
+                    <p class="version-title">BRAKING BAD GAME</p>
+                    <p class="subtitle sub-blue">(NOT RLLY)</p>
+                </div>
+                <a href="GamesNPrograms/BoronBromine.html" class="btn btn-blue">PLAY</a>
+            </div>
+
+            <div class="version-card bg-rhythm blue-hover">
+                <div class="text-group">
+                    <p class="version-title">RHYTHM GAME</p>
+                    <p class="subtitle sub-blue">(SIMILAR TO GUITAR HERO)</p>
+                </div>
+                <a href="GamesNPrograms/RhythmGame.html" class="btn btn-blue">PLAY</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

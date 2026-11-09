@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Media Player Pro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+
+<style>
+:root {
+    --bg: #2b2b2b;
+    --ui: #ffffff;
+}
+
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background: var(--bg);
+    color: var(--ui);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+}
+
+/* PLAYLIST */
+.playlist {
+    width: 30%;
+    background: rgba(255, 255, 255, .04);
+    overflow-y: auto;
+    padding: 20px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.track {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: 0.2s;
+}
+
+.track:hover { background: rgba(255, 255, 255, .1); }
+.track.active { background: rgba(255, 255, 255, .2); }
+
+.track img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+/* THE CIRCLE NOTE */
+.note-container {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.track.playing .note-container {
+    display: flex;
+}
+
+.note { font-size: 14px; }
+
+/* PLAYER */
+.player {
+    width: 70%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+.cover {
+    width: 300px;
+    height: 300px;
+    border-radius: 15px;
+    background: #444;
+    margin-bottom: 20px;
+    object-fit: cover;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.song-title {
+    font-size: 22px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* TIMELINE WITH TIMESTAMPS */
+.timeline-container {
+    width: 80%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.time-display {
+    font-size: 13px;
+    font-family: monospace;
+    min-width: 45px;
+    opacity: 0.8;
+}
+
+.timeline { 
+    flex-grow: 1; 
+    cursor: pointer; 
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+    align-items: center;
+}
+
+button {
+    background: none;
+    border: 2px solid var(--ui);
+    color: var(--ui);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+button:hover { background: var(--ui); color: var(--bg); }
+button.active { background: var(--ui); color: var(--bg); }
+
+/* FILE ACTION BUTTONS */
+.file-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* PANNER SLIDER */
+.panner-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.panner-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.panner-label { font-size: 12px; opacity: 0.8; }
+
+input[type=range] {
+    accent-color: var(--ui);
+}
+
+/* SETTINGS PANEL */
+.settings-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    font-size: 13px;
+}
+
+/* QUEUE */
+.queue-box {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 300px;
+}
+
+.queue {
+    display: none;
+    background: rgba(0, 0, 0, .85);
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.queue-item { 
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px; 
+    border-radius: 6px; 
+    cursor: grab; 
+    font-size: 14px;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+}
+
+.queue-item:hover { background: rgba(255,255,255,0.1); }
+.queue-item.active { background: rgba(255, 255, 255, .2); }
+
+.queue-item-name {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+}
+
+.queue-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.queue-play-btn {
+    border: 1px solid var(--ui);
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.skip-checkbox {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="playlist">
+        <h2>Library</h2>
+        <div id="trackList"></div>
+    </div>
+
+    <div class="player">
+        <video id="video" class="cover" style="display:none;" controls crossorigin="anonymous"></video>
+        <img id="cover" class="cover" src="https://via.placeholder.com/300?text=Select+Music">
+
+        <div id="title" class="song-title">No Song Loaded</div>
+
+        <div class="timeline-container">
+            <span id="currentTime" class="time-display">0:00</span>
+            <input type="range" id="timeline" class="timeline" value="0">
+            <span id="durationTime" class="time-display">0:00</span>
+        </div>
+
+        <div class="controls">
+            <button id="loopBtn">Loop</button>
+            <button id="shuffleBtn">Shuffle</button>
+            <button id="prevBtn">⏮</button>
+            <button id="playBtn">▶</button>
+            <button id="nextBtn">⏭</button>
+            <input type="range" id="volume" class="volume" min="0" max="1" step="0.01" value="1" title="Volume">
+        </div>
+
+        <div class="panner-container">
+            <span class="panner-label">L &nbsp;&nbsp;&nbsp;&nbsp; Center &nbsp;&nbsp;&nbsp;&nbsp; R</span>
+            <div class="panner-row">
+                <input type="range" id="pannerSlider" min="-1" max="1" step="0.1" value="0" style="width: 150px;">
+                <button id="centerPannerBtn" style="padding: 4px 8px; font-size: 11px;">Reset Center</button>
+            </div>
+        </div>
+
+        <div class="file-actions">
+            <button id="openBtn">Open Files</button>
+            <button id="addBtn">Add Files</button>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".mp3,.mp4,.wav" multiple hidden>
+        <input type="file" id="addInput" accept=".mp3,.mp4,.wav" multiple hidden>
+
+        <div class="settings-panel">
+            <div class="setting-item">
+                <label>Background</label>
+                <input type="color" id="bgColorPicker" value="#2b2b2b">
+            </div>
+            <div class="setting-item">
+                <label>UI / Text</label>
+                <input type="color" id="uiColorPicker" value="#ffffff">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="queue-box">
+    <button id="queueToggle">Queue ▼</button>
+    <div id="queueList" class="queue"></div>
+</div>
+
+<audio id="audio" crossorigin="anonymous"></audio>
+
+<script>
+/* ELEMENTS */
+const audio = document.getElementById("audio");
+const video = document.getElementById("video");
+const timeline = document.getElementById("timeline");
+const playBtn = document.getElementById("playBtn");
+const trackList = document.getElementById("trackList");
+const fileInput = document.getElementById("fileInput");
+const addInput = document.getElementById("addInput");
+const openBtn = document.getElementById("openBtn");
+const addBtn = document.getElementById("addBtn");
+const title = document.getElementById("title");
+const cover = document.getElementById("cover");
+const queueList = document.getElementById("queueList");
+const pannerSlider = document.getElementById("pannerSlider");
+const centerPannerBtn = document.getElementById("centerPannerBtn");
+const currentTimeDisplay = document.getElementById("currentTime");
+const durationTimeDisplay = document.getElementById("durationTime");
+
+/* THEME ELEMENTS */
+const bgColorPicker = document.getElementById("bgColorPicker");
+const uiColorPicker = document.getElementById("uiColorPicker");
+
+/* WEB AUDIO API FOR PANNING */
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+let audioSourceNode;
+let videoSourceNode;
+let pannerNode;
+
+function initAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+        pannerNode = audioCtx.createStereoPanner();
+        
+        audioSourceNode = audioCtx.createMediaElementSource(audio);
+        audioSourceNode.connect(pannerNode);
+        
+        videoSourceNode = audioCtx.createMediaElementSource(video);
+        videoSourceNode.connect(pannerNode);
+        
+        pannerNode.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+/* DATA */
+let playlist = [];
+let queue = [];
+let currentIndex = 0;
+let shuffle = false;
+let skippedSongs = new Set();
+
+/* TIME FORMATTING */
+function formatTime(seconds) {
+    if (isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+/* THEME LOGIC */
+bgColorPicker.oninput = (e) => {
+    document.documentElement.style.setProperty('--bg', e.target.value);
+};
+uiColorPicker.oninput = (e) => {
+    document.documentElement.style.setProperty('--ui', e.target.value);
+};
+
+/* PANNER LOGIC */
+pannerSlider.oninput = (e) => {
+    if (audioCtx) pannerNode.pan.value = e.target.value;
+};
+
+centerPannerBtn.onclick = () => {
+    pannerSlider.value = 0;
+    if (audioCtx) pannerNode.pan.value = 0;
+};
+
+/* STOP MEDIA SAFELY */
+function stopAllMedia() {
+    audio.pause();
+    video.pause();
+    audio.removeAttribute("src");
+    video.removeAttribute("src");
+    audio.load();
+    video.load();
+}
+
+/* LOAD TRACK */
+function loadTrack(index) {
+    const file = queue[index];
+    if (!file) return;
+
+    stopAllMedia();
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.includes("mp4");
+    title.textContent = file.name;
+
+    if (isVideo) {
+        video.src = url;
+        video.style.display = "block";
+        cover.style.display = "none";
+        initAudioContext();
+        video.play().catch(() => {});
+    } else {
+        audio.src = url;
+        video.style.display = "none";
+        cover.style.display = "block";
+        initAudioContext();
+        audio.play().catch(() => {});
+        readMetadata(file);
+    }
+
+    currentIndex = index;
+    updateActiveUI();
+}
+
+/* METADATA */
+function readMetadata(file) {
+    jsmediatags.read(file, {
+        onSuccess: function(tag) {
+            if (tag.tags.picture) {
+                const data = tag.tags.picture.data;
+                const format = tag.tags.picture.format;
+                let base64 = "";
+                for (let i = 0; i < data.length; i++) base64 += String.fromCharCode(data[i]);
+                cover.src = `data:${format};base64,${btoa(base64)}`;
+            } else {
+                cover.src = "https://via.placeholder.com/300?text=♪";
+            }
+        },
+        onError: function() {
+            cover.src = "https://via.placeholder.com/300?text=♪";
+        }
+    });
+}
+
+/* UI UPDATES */
+function updateActiveUI() {
+    document.querySelectorAll(".track").forEach(t => t.classList.remove("playing", "active"));
+    const currentFile = queue[currentIndex];
+    if(!currentFile) return;
+    document.querySelectorAll(".track").forEach(track => {
+        if(track.innerText.includes(currentFile.name)) track.classList.add("playing", "active");
+    });
+    renderQueue();
+}
+
+function renderPlaylist() {
+    trackList.innerHTML = "";
+    playlist.forEach((file, i) => {
+        const div = document.createElement("div");
+        div.className = "track";
+        div.innerHTML = `<div class="note-container"><span class="note">🎵</span></div><img src="https://via.placeholder.com/40?text=♪"><span>${file.name}</span>`;
+        div.onclick = () => { 
+            initAudioContext(); 
+            queue = [...playlist]; 
+            skippedSongs.clear(); 
+            if (shuffle) {
+                const selectedFile = queue[i];
+                queue.splice(i, 1);
+                queue.sort(() => Math.random() - 0.5);
+                queue.unshift(selectedFile);
+                loadTrack(0);
+            } else {
+                loadTrack(i);
+            }
+        };
+        trackList.appendChild(div);
+    });
+}
+
+function renderQueue() {
+    queueList.innerHTML = "";
+    queue.forEach((file, i) => {
+        const div = document.createElement("div");
+        div.className = "queue-item" + (i === currentIndex ? " active" : "");
+        div.draggable = true;
+        div.innerHTML = `
+            <span class="queue-item-name">${file.name}</span>
+            <div class="queue-controls">
+                <input type="checkbox" class="skip-checkbox" ${skippedSongs.has(i) ? 'checked' : ''}>
+                <button class="queue-play-btn">▶</button>
+            </div>`;
+        div.querySelector('.queue-play-btn').onclick = (e) => { e.stopPropagation(); initAudioContext(); loadTrack(i); };
+        div.querySelector('.skip-checkbox').onchange = (e) => { e.stopPropagation(); e.target.checked ? skippedSongs.add(i) : skippedSongs.delete(i); };
+        div.ondragstart = e => e.dataTransfer.setData("index", i);
+        div.ondragover = e => e.preventDefault();
+        div.ondrop = e => {
+            const from = e.dataTransfer.getData("index");
+            const item = queue.splice(from, 1)[0];
+            queue.splice(i, 0, item);
+            renderQueue();
+        };
+        queueList.appendChild(div);
+    });
+}
+
+/* NAVIGATION */
+function playNext() {
+    if (queue.length === 0) return;
+    let nextIndex = (currentIndex + 1) % queue.length;
+    let start = nextIndex;
+    while(skippedSongs.has(nextIndex)) {
+        nextIndex = (nextIndex + 1) % queue.length;
+        if(nextIndex === start) break;
+    }
+    loadTrack(nextIndex);
+}
+
+function playPrev() {
+    if (queue.length === 0) return;
+    let prevIndex = (currentIndex - 1 + queue.length) % queue.length;
+    let start = prevIndex;
+    while(skippedSongs.has(prevIndex)) {
+        prevIndex = (prevIndex - 1 + queue.length) % queue.length;
+        if(prevIndex === start) break;
+    }
+    loadTrack(prevIndex);
+}
+
+/* CONTROLS & TIMELINE */
+const getActiveMedia = () => video.style.display === "block" ? video : audio;
+
+playBtn.onclick = () => {
+    initAudioContext();
+    const media = getActiveMedia();
+    if (media.paused) {
+        media.play();
+        playBtn.textContent = "⏸";
+    } else {
+        media.pause();
+        playBtn.textContent = "▶";
+    }
+};
+
+const updateProgress = () => {
+    const media = getActiveMedia();
+    if (media.duration) {
+        timeline.value = (media.currentTime / media.duration) * 100 || 0;
+        currentTimeDisplay.textContent = formatTime(media.currentTime);
+        durationTimeDisplay.textContent = formatTime(media.duration);
+    }
+};
+
+audio.ontimeupdate = updateProgress;
+video.ontimeupdate = updateProgress;
+audio.onloadedmetadata = updateProgress;
+video.onloadedmetadata = updateProgress;
+
+timeline.oninput = () => {
+    const media = getActiveMedia();
+    media.currentTime = (timeline.value / 100) * media.duration;
+};
+
+document.getElementById("nextBtn").onclick = playNext;
+document.getElementById("prevBtn").onclick = playPrev;
+
+/* FIXED SHUFFLE LOGIC */
+document.getElementById("shuffleBtn").onclick = function() {
+    shuffle = !shuffle;
+    this.classList.toggle("active");
+    if (shuffle && queue.length > 0) {
+        const currentFile = queue[currentIndex];
+        let tempQueue = [...playlist];
+        const currentInPlaylistIndex = tempQueue.findIndex(f => f.name === currentFile.name);
+        if (currentInPlaylistIndex > -1) {
+            tempQueue.splice(currentInPlaylistIndex, 1);
+        }
+        tempQueue.sort(() => Math.random() - 0.5);
+        queue = [currentFile, ...tempQueue];
+        currentIndex = 0;
+    } else {
+        queue = [...playlist];
+        const currentFile = title.textContent;
+        currentIndex = queue.findIndex(f => f.name === currentFile);
+    }
+    renderQueue();
+};
+
+document.getElementById("loopBtn").onclick = function() {
+    audio.loop = video.loop = !audio.loop;
+    this.classList.toggle("active");
+};
+
+/* SYNC PLAY BUTTON STATE */
+const syncPlayBtn = () => {
+    const media = getActiveMedia();
+    playBtn.textContent = media.paused ? "▶" : "⏸";
+};
+audio.onplay = video.onplay = syncPlayBtn;
+audio.onpause = video.onpause = syncPlayBtn;
+audio.onended = () => { if (!audio.loop) playNext(); };
+video.onended = () => { if (!video.loop) playNext(); };
+
+document.getElementById("volume").oninput = e => {
+    audio.volume = video.volume = e.target.value;
+};
+
+/* FILE MANAGEMENT */
+openBtn.onclick = () => fileInput.click();
+addBtn.onclick = () => addInput.click();
+
+fileInput.onchange = e => {
+    playlist = Array.from(e.target.files);
+    queue = [...playlist];
+    skippedSongs.clear();
+    renderPlaylist();
+    renderQueue();
+    if(playlist.length > 0) loadTrack(0);
+};
+
+addInput.onchange = e => {
+    const newFiles = Array.from(e.target.files);
+    playlist = playlist.concat(newFiles);
+    queue = queue.concat(newFiles);
+    renderPlaylist();
+    renderQueue();
+    // If nothing was playing, start playing the first new file added
+    if (title.textContent === "No Song Loaded" && playlist.length > 0) {
+        loadTrack(playlist.length - newFiles.length);
+    }
+};
+
+document.getElementById("queueToggle").onclick = () => {
+    queueList.style.display = queueList.style.display === "block" ? "none" : "block";
+};
+
+/* KEYBOARD SHORTCUTS */
+document.addEventListener("keydown", e => {
+    const media = getActiveMedia();
+    if (e.code === "Space") { e.preventDefault(); playBtn.click(); }
+    if (e.code === "ArrowRight") { e.preventDefault(); media.currentTime += 5; }
+    if (e.code === "ArrowLeft") { e.preventDefault(); media.currentTime -= 5; }
+    if (e.code === "ArrowUp") { 
+        e.preventDefault(); 
+        const v = Math.min(1, media.volume + 0.1);
+        audio.volume = video.volume = v;
+        document.getElementById("volume").value = v;
+    }
+    if (e.code === "ArrowDown") { 
+        e.preventDefault(); 
+        const v = Math.max(0, media.volume - 0.1);
+        audio.volume = video.volume = v;
+        document.getElementById("volume").value = v;
+    }
+});
+</script>
+
+</body>
+</html>

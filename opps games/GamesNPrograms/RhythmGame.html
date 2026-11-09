@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Universal Web Clone Hero Player</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: none; /* Globally completely kills double-tap and pinch zoom behaviors */
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: sans-serif;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #setup-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #120024, #000d1a);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            gap: 15px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .btn:hover { background: #0056b3; }
+        .upload-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px dashed #444;
+            width: 340px;
+        }
+        .toggle-upload {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .toggle-btn {
+            background: #333;
+            color: #aaa;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .toggle-btn.active {
+            background: #00ffcc;
+            color: #000;
+            font-weight: bold;
+        }
+        .panels-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 750px;
+        }
+        .settings-panel {
+            background: rgba(255,255,255,0.08);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .settings-panel h3 {
+            border-bottom: 1px solid #444;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            font-size: 16px;
+            color: #00ffcc;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        select, input[type="number"], input[type="range"] {
+            padding: 4px;
+            border-radius: 4px;
+            border: none;
+            background: #222;
+            color: white;
+        }
+        .key-input {
+            width: 70px;
+            text-align: center;
+            background: #333;
+            border: 1px solid #555;
+            color: #00ffcc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 3px;
+        }
+        #game-container {
+            position: relative;
+            background: #050505;
+            display: none;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .score-board {
+            font-size: 22px;
+            font-weight: bold;
+            font-family: monospace;
+            text-shadow: 2px 2px #000;
+            pointer-events: auto;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .sp-bar-container {
+            width: 150px;
+            height: 14px;
+            background: #222;
+            border: 1px solid #fff;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .sp-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: #00e5ff;
+            transition: width 0.1s linear;
+        }
+        .sp-bar-fill.ready {
+            background: #ffff00;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
+        
+        .touch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            display: none;
+            z-index: 10;
+        }
+        .touch-btn {
+            position: absolute;
+            opacity: 0.5;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .touch-btn:active { opacity: 0.8; }
+        
+        .fret-0 { background: #00ff00; border: 2px solid #00aa00; }
+        .fret-1 { background: #ff0000; border: 2px solid #aa0000; }
+        .fret-2 { background: #ffff00; border: 2px solid #aaaa00; }
+        .fret-3 { background: #0000ff; border: 2px solid #0000aa; }
+        .fret-4 { background: #ffa500; border: 2px solid #aa6500; }
+        .strum-btn { background: #444; border: 2px solid #666; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;}
+        .sp-touch-btn { background: #00e5ff; border: 2px solid #008ba3; color: black; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%; font-size: 13px; z-index: 15; }
+
+        #loading {
+            display: none;
+            font-size: 18px;
+            color: #00ffcc;
+            text-align: center;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <h2>Web Clone Hero Engine</h2>
+        <div id="loading">Processing files & unpacking audio timelines...</div>
+        
+        <div class="upload-box">
+            <div class="toggle-upload">
+                <button id="modeFolder" class="toggle-btn active" onclick="setUploadMode('folder')">Folder Input</button>
+                <button id="modeSng" class="toggle-btn" onclick="setUploadMode('sng')">.SNG File</button>
+            </div>
+            <div id="folderInputContainer">
+                <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
+                <button class="btn" onclick="document.getElementById('folderInput').click()">Select Song Folder</button>
+            </div>
+            <div id="sngInputContainer" style="display:none">
+                <input type="file" id="sngInput" accept=".sng" style="display:none">
+                <button class="btn" onclick="document.getElementById('sngInput').click()">Select .sng File</button>
+            </div>
+        </div>
+        
+        <div class="panels-container">
+            <div class="settings-panel">
+                <h3>Gameplay Settings</h3>
+                <div class="setting-row">
+                    <label>Control Mode:</label>
+                    <select id="controlModeSelect" onchange="toggleKeybindPanel()">
+                        <option value="normal">Normal (Keyboard)</option>
+                        <option value="ipad">iPad Mode</option>
+                        <option value="ff">Fortnite Festival</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Gamepad Mode:</label>
+                    <select id="gamepadModeSelect">
+                        <option value="true">On (No Strumming)</option>
+                        <option value="false">Off (Must Strum)</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Scroll Speed:</label>
+                    <input type="number" id="scrollSpeedInput" min="5" max="30" value="12">
+                </div>
+                <div class="setting-row">
+                    <label>Track Length Offset:</label>
+                    <input type="range" id="trackLengthInput" min="0.4" max="0.9" step="0.05" value="0.75">
+                </div>
+            </div>
+
+            <div class="settings-panel" id="keybindsPanel">
+                <h3>Custom Keybinds (Click to change)</h3>
+                <div class="setting-row"><label>Lane 1:</label><div class="key-input" id="kb-0" onclick="assignKey(0)">A</div></div>
+                <div class="setting-row"><label>Lane 2:</label><div class="key-input" id="kb-1" onclick="assignKey(1)">S</div></div>
+                <div class="setting-row"><label>Lane 3:</label><div class="key-input" id="kb-2" onclick="assignKey(2)">L</div></div>
+                <div class="setting-row"><label>Lane 4:</label><div class="key-input" id="kb-3" onclick="assignKey(3)">;</div></div>
+                <div class="setting-row"><label>Lane 5:</label><div class="key-input" id="kb-4" onclick="assignKey(4)">'</div></div>
+                <div class="setting-row"><label>Star Power:</label><div class="key-input" id="kb-sp" onclick="assignKey('sp')">SPACE</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div class="score-board">
+                <div>Score: <span id="scoreText">0</span></div>
+                <div>Combo: <span id="comboText">0</span></div>
+                <div>Mult: <span id="multText">x1</span></div>
+                <div class="sp-bar-container"><div id="spFill" class="sp-bar-fill"></div></div>
+            </div>
+            <button class="btn" style="pointer-events: auto;" onclick="returnToMenu()">Change Song</button>
+        </div>
+        <div id="touch-layer" class="touch-overlay"></div>
+    </div>
+
+    <script>
+        let audioCtx = null, audioBuffer = null, audioSource = null;
+        let startTime = 0, songOffset = 0, isPlaying = false;
+        let score = 0, combo = 0, chartNotes = [];
+        
+        let starPowerAmount = 0;
+        let starPowerActive = false;
+        let starPowerEndTime = 0;
+        let currentSustainNotes = [null, null, null, null, null];
+
+        let settings = {
+            controlMode: 'normal',
+            gamepadMode: false,
+            scrollSpeed: 12,
+            trackLength: 0.75,
+            binds: ['A', 'S', 'L', ';', "'"],
+            spBind: 'SPACE'
+        };
+
+        let activeKeys = [false, false, false, false, false];
+        let awaitingKeyIdx = null;
+        let touchZones = [];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audioExtensions = ['.mp3', '.ogg', '.wav', '.opus', '.m4a', '.aac', '.flac', '.webm'];
+
+        function isAudioFile(name) { return audioExtensions.some(ext => name.toLowerCase().endsWith(ext)); }
+
+        if(localStorage.getItem('ch_settings_v4')) {
+            settings = JSON.parse(localStorage.getItem('ch_settings_v4'));
+            document.getElementById('controlModeSelect').value = settings.controlMode;
+            document.getElementById('gamepadModeSelect').value = settings.gamepadMode.toString();
+            document.getElementById('scrollSpeedInput').value = settings.scrollSpeed;
+            document.getElementById('trackLengthInput').value = settings.trackLength || 0.75;
+            updateKeybindLabels();
+        }
+        toggleKeybindPanel();
+
+        function saveSettings() {
+            settings.controlMode = document.getElementById('controlModeSelect').value;
+            settings.gamepadMode = document.getElementById('gamepadModeSelect').value === 'true';
+            settings.scrollSpeed = parseInt(document.getElementById('scrollSpeedInput').value);
+            settings.trackLength = parseFloat(document.getElementById('trackLengthInput').value);
+            localStorage.setItem('ch_settings_v4', JSON.stringify(settings));
+        }
+
+        function updateKeybindLabels() {
+            for(let i=0; i<5; i++) document.getElementById(`kb-${i}`).innerText = settings.binds[i];
+            document.getElementById('kb-sp').innerText = settings.spBind;
+        }
+
+        function toggleKeybindPanel() {
+            const mode = document.getElementById('controlModeSelect').value;
+            document.getElementById('keybindsPanel').style.display = (mode === 'normal') ? 'flex' : 'none';
+        }
+
+        function assignKey(idx) {
+            awaitingKeyIdx = idx;
+            let div = idx === 'sp' ? document.getElementById('kb-sp') : document.getElementById(`kb-${idx}`);
+            div.innerText = "???";
+            div.style.background = "#552200";
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(!isPlaying || awaitingKeyIdx !== null) return;
+            let pressed = e.key.toUpperCase();
+            if(e.code === 'Space') pressed = 'SPACE';
+            if(e.code === 'Semicolon') pressed = ';';
+            if(e.code === 'Quote') pressed = "'";
+
+            if(pressed === settings.spBind && starPowerAmount >= 50 && !starPowerActive) {
+                starPowerActive = true;
+                starPowerEndTime = audioCtx.currentTime - startTime + (starPowerAmount / 12);
+                starPowerAmount = 0;
+            }
+
+            let idx = settings.binds.indexOf(pressed);
+            if(idx !== -1 && !activeKeys[idx]) {
+                activeKeys[idx] = true;
+                if(settings.gamepadMode) checkNoteHit(idx);
+            }
+            if(e.key === 'ArrowUp' || e.key === 'ArrowDown') handleStrum();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            let pressed = e.key.toUpperCase();
+            if(e.code === 'Space') pressed = 'SPACE';
+            if(e.code === 'Semicolon') pressed = ';';
+            if(e.code === 'Quote') pressed = "'";
+            let idx = settings.binds.indexOf(pressed);
+            if(idx !== -1) {
+                activeKeys[idx] = false;
+                if(currentSustainNotes[idx]) currentSustainNotes[idx] = null;
+            }
+        });
+
+        function handleStrum() {
+            if(!settings.gamepadMode) {
+                for(let i=0; i<5; i++) { if(activeKeys[i]) checkNoteHit(i); }
+            }
+        }
+
+        function checkNoteHit(lane) {
+            let curTime = audioCtx.currentTime - startTime;
+            for(let n of chartNotes) {
+                if(n.lane === lane && !n.hit) {
+                    let diff = Math.abs(curTime - n.time);
+                    if(diff <= hitWindow) {
+                        n.hit = true; combo++; score += 50;
+                        if(n.isStar) starPowerAmount = Math.min(100, starPowerAmount + 12);
+                        if(n.length > 0) currentSustainNotes[lane] = n;
+                        updateUI();
+                        return;
+                    }
+                }
+            }
+        }
+
+        function getPerspectiveX(targetX, y, canvasW) {
+            let horizonY = 0;
+            let centerWidth = canvasW / 2;
+            let progress = y / canvas.height;
+            let perspectiveFactor = 0.35 + (progress * 0.65); 
+            return centerWidth + (targetX - centerWidth) * perspectiveFactor;
+        }
+
+        function resizeGameContainer() {
+            const container = document.getElementById('game-container');
+            let windowW = window.innerWidth;
+            let windowH = window.innerHeight;
+            let targetW = windowW;
+            let targetH = windowW * (9 / 16);
+
+            if(targetH > windowH) {
+                targetH = windowH;
+                targetW = windowH * (16 / 9);
+            }
+
+            container.style.width = `${targetW}px`;
+            container.style.height = `${targetH}px`;
+            canvas.width = targetW;
+            canvas.height = targetH;
+        }
+        window.addEventListener('resize', () => { if(isPlaying) { resizeGameContainer(); setupTouchOverlays(); } });
+
+        document.getElementById('folderInput').addEventListener('change', async (e) => {
+            const files = e.target.files; if(!files.length) return;
+            saveSettings(); showLoading(true);
+            let chartFile = null, audioFile = null;
+            for(let f of files) {
+                if(f.name.toLowerCase() === 'notes.chart') chartFile = f;
+                if(isAudioFile(f.name) && !audioFile) audioFile = f;
+            }
+            if(!chartFile || !audioFile) { alert("Invalid selection components folder."); showLoading(false); return; }
+            try {
+                parseChart(await chartFile.text());
+                await setupAudioEngine(await audioFile.arrayBuffer());
+                initGameLayout();
+            } catch(e) { alert("Audio parse collision event crash."); showLoading(false); }
+        });
+
+        document.getElementById('sngInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0]; if(!file) return;
+            saveSettings(); showLoading(true);
+            try {
+                const buffer = await file.arrayBuffer();
+                const view = new DataView(buffer);
+                if(view.getUint32(0, false) !== 0x534E4700) throw new Error("Faulty format signature header.");
+                let metaLen = view.getUint32(16, true), filesCount = view.getUint32(20, true);
+                let offset = 24 + metaLen, chartText = "", audioBytes = null;
+                for(let i=0; i<filesCount; i++) {
+                    if (offset >= buffer.byteLength) break;
+                    let nameLen = view.getUint8(offset); offset++;
+                    let name = ""; for(let l=0; l<nameLen; l++) name += String.fromCharCode(view.getUint8(offset+l));
+                    offset += nameLen;
+                    let cLen = view.getUint64 ? Number(view.getUint64(offset, true)) : view.getUint32(offset, true); offset += 8;
+                    let dOff = view.getUint64 ? Number(view.getUint64(offset, true)) : view.getUint32(offset, true); offset += 8;
+                    let chunk = buffer.slice(dOff, dOff + cLen);
+                    if(name.toLowerCase() === "notes.chart") chartText = new TextDecoder("utf-8").decode(chunk);
+                    if(isAudioFile(name) && !audioBytes) audioBytes = chunk;
+                }
+                if(!chartText || !audioBytes) throw new Error("Missing payload modules.");
+                parseChart(chartText); await setupAudioEngine(audioBytes); initGameLayout();
+            } catch(err) { alert("SNG read exception: " + err.message); showLoading(false); }
+        });
+
+        function showLoading(s) { document.getElementById('loading').style.display = s ? 'block' : 'none'; }
+        async function setupAudioEngine(ab) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioBuffer = await audioCtx.decodeAudioData(ab); }
+
+        function parseChart(text) {
+            chartNotes = []; songOffset = 0;
+            let resolution = 192, bpms = [];
+            const lines = text.split(/\r?\n/);
+            let currentSection = "";
+
+            for(let line of lines) {
+                line = line.trim();
+                if(line.startsWith('[')) { currentSection = line.toLowerCase(); continue; }
+                if(!line.includes('=')) continue;
+                let parts = line.split('='), tick = parseInt(parts[0].trim()), data = parts[1].trim();
+
+                if(currentSection === '[song]') {
+                    if(parts[0].toLowerCase().trim() === 'offset') songOffset = parseFloat(data);
+                    if(parts[0].toLowerCase().trim() === 'resolution') resolution = parseInt(data);
+                } else if(currentSection === '[synctrack]') {
+                    if(data.startsWith('B')) bpms.push({ tick, bpm: parseInt(data.split(' ')[1]) / 1000 });
+                } else if(currentSection === '[expertsingle]') {
+                    let noteData = data.split(' ');
+                    if(noteData[0] === 'N') {
+                        let lane = parseInt(noteData[1]);
+                        let tickLength = parseInt(noteData[2]);
+                        if(lane >= 0 && lane <= 4) {
+                            chartNotes.push({ tick, lane, tickLength, hit: false, time: 0, length: 0, isStar: false });
+                        }
+                    } else if(noteData[0] === 'S') {
+                        let phraseLen = parseInt(noteData[2]);
+                        chartNotes.forEach(n => {
+                            if(n.tick >= tick && n.tick <= tick + phraseLen) n.isStar = true;
+                        });
+                    }
+                }
+            }
+            if(!bpms.length) bpms.push({tick: 0, bpm: 120});
+
+            const tickToSec = (tk) => {
+                let ms = 0, curT = 0, curBPM = bpms[0].bpm;
+                for(let b of bpms) {
+                    if(tk > b.tick) {
+                        ms += ((b.tick - curT) / resolution) * (60000 / curBPM);
+                        curT = b.tick; curBPM = b.bpm;
+                    } else break;
+                }
+                return (ms + ((tk - curT) / resolution) * (60000 / curBPM)) / 1000;
+            };
+
+            chartNotes.forEach(n => {
+                n.time = tickToSec(n.tick);
+                if(n.tickLength > 40) n.length = tickToSec(n.tick + n.tickLength) - n.time;
+            });
+            chartNotes.sort((a,b) => a.time - b.time);
+        }
+
+        function initGameLayout() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            resizeGameContainer();
+
+            score = 0; combo = 0; starPowerAmount = 0; starPowerActive = false;
+            currentSustainNotes.fill(null);
+            updateUI();
+
+            setupTouchOverlays();
+            isPlaying = true;
+
+            audioSource = audioCtx.createBufferSource();
+            audioSource.buffer = audioBuffer;
+            audioSource.connect(audioCtx.destination);
+            let delay = Math.max(0, -songOffset);
+            startTime = audioCtx.currentTime + delay;
+            audioSource.start(startTime);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('comboText').innerText = combo;
+            let baseMult = combo >= 30 ? 4 : combo >= 20 ? 3 : combo >= 10 ? 2 : 1;
+            if(starPowerActive) baseMult *= 2;
+            document.getElementById('multText').innerText = `x${baseMult}`;
+            
+            const fill = document.getElementById('spFill');
+            fill.style.width = `${starPowerAmount}%`;
+            fill.classList.toggle('ready', starPowerAmount >= 50);
+        }
+
+        const hitWindow = 0.140;
+
+        function checkKeyboardInputs() {
+            if(settings.controlMode !== 'normal') return;
+            for(let i=0; i<5; i++) {
+                if(currentSustainNotes[i] && !activeKeys[i]) {
+                    currentSustainNotes[i] = null;
+                }
+            }
+        }
+
+        function gameLoop() {
+            if(!isPlaying) return;
+            let curTime = audioCtx.currentTime - startTime;
+
+            if(starPowerActive) {
+                let remaining = starPowerEndTime - curTime;
+                if(remaining <= 0) { starPowerActive = false; updateUI(); }
+                else {
+                    starPowerAmount = (remaining / (starPowerEndTime - (starPowerEndTime - remaining))) * 100;
+                    document.getElementById('spFill').style.width = `${starPowerAmount}%`;
+                }
+            }
+
+            checkKeyboardInputs();
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+
+            let laneWidthTarget = 75;
+            let totalTrackWidth = laneWidthTarget * 5;
+            let targetTrackLeft = (canvas.width - totalTrackWidth) / 2;
+            let hitBarY = canvas.height * settings.trackLength;
+
+            // Draw Pseudo-3D Perspective Background Lane Surface
+            ctx.fillStyle = starPowerActive ? "#2b2200" : "#141417";
+            ctx.beginPath();
+            ctx.moveTo(getPerspectiveX(targetTrackLeft, 0, canvas.width), 0);
+            ctx.lineTo(getPerspectiveX(targetTrackLeft + totalTrackWidth, 0, canvas.width), 0);
+            ctx.lineTo(getPerspectiveX(targetTrackLeft + totalTrackWidth, canvas.height, canvas.width), canvas.height);
+            ctx.lineTo(getPerspectiveX(targetTrackLeft, canvas.height, canvas.width), canvas.height);
+            ctx.fill();
+
+            ctx.strokeStyle = "#3a3a42"; ctx.lineWidth = 2;
+            for(let i=0; i<=5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(getPerspectiveX(targetTrackLeft + i*laneWidthTarget, 0, canvas.width), 0);
+                ctx.lineTo(getPerspectiveX(targetTrackLeft + i*laneWidthTarget, canvas.height, canvas.width), canvas.height);
+                ctx.stroke();
+            }
+
+            for(let i=0; i<5; i++) {
+                let hold = currentSustainNotes[i];
+                if(hold) {
+                    if(curTime > hold.time + hold.length) currentSustainNotes[i] = null;
+                    else { score += 1; updateUI(); }
+                }
+            }
+
+            // Render 3D Projected Sustain Tails
+            for(let n of chartNotes) {
+                if(n.length > 0 && n.time + n.length > curTime && n.time < curTime + 2.5) {
+                    if(n.hit && curTime > n.time + n.length) continue;
+
+                    let relStart = n.time - curTime;
+                    let relEnd = (n.time + n.length) - curTime;
+                    let yStart = hitBarY - (relStart * settings.scrollSpeed * 60);
+                    let yEnd = hitBarY - (relEnd * settings.scrollSpeed * 60);
+
+                    if(n.hit) yStart = hitBarY; 
+                    if(yStart < 0 || yEnd > canvas.height || yEnd >= yStart) continue;
+
+                    let targetX = targetTrackLeft + n.lane*laneWidthTarget + laneWidthTarget/2;
+                    let pXStart = getPerspectiveX(targetX, yStart, canvas.width);
+                    let pXEnd = getPerspectiveX(targetX, yEnd, canvas.width);
+
+                    ctx.strokeStyle = n.isStar ? "#00e5ff" : "#555";
+                    ctx.lineWidth = 12 * (yStart / canvas.height + 0.3); 
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    ctx.moveTo(pXStart, yStart);
+                    ctx.lineTo(pXEnd, yEnd);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Targets Fret Baselines
+            const colors = ["#00ff00", "#ff0000", "#ffff00", "#0000ff", "#ffa500"];
+            for(let i=0; i<5; i++) {
+                let laneX = targetTrackLeft + i*laneWidthTarget + laneWidthTarget/2;
+                let projX = getPerspectiveX(laneX, hitBarY, canvas.width);
+                let currentScaleWidth = laneWidthTarget * (hitBarY / canvas.height * 0.65 + 0.35);
+
+                ctx.fillStyle = activeKeys[i] ? colors[i] : "transparent";
+                ctx.strokeStyle = colors[i]; ctx.lineWidth = 4;
+                ctx.fillRect(projX - currentScaleWidth/2 + 4, hitBarY - 10, currentScaleWidth - 8, 20);
+                ctx.strokeRect(projX - currentScaleWidth/2 + 4, hitBarY - 10, currentScaleWidth - 8, 20);
+            }
+
+            // Render Note Heads Matrix
+            for(let n of chartNotes) {
+                if(n.time < curTime - 0.20) {
+                    if(!n.hit) { combo = 0; updateUI(); n.hit = true; }
+                    continue;
+                }
+                if(n.time > curTime + 2.0 || n.hit) continue;
+
+                let relTime = n.time - curTime;
+                let noteY = hitBarY - (relTime * settings.scrollSpeed * 60);
+
+                if(noteY > 0 && noteY < canvas.height) {
+                    let laneX = targetTrackLeft + n.lane*laneWidthTarget + laneWidthTarget/2;
+                    let projX = getPerspectiveX(laneX, noteY, canvas.width);
+                    let currentScaleWidth = laneWidthTarget * (noteY / canvas.height * 0.65 + 0.35);
+
+                    ctx.fillStyle = n.isStar ? "#00e5ff" : colors[n.lane];
+                    ctx.beginPath();
+                    ctx.roundRect(projX - currentScaleWidth/2 + 4, noteY - 12, currentScaleWidth - 8, 24, [6]);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = "#fff"; ctx.beginPath();
+                    ctx.arc(projX, noteY, 5, 0, Math.PI*2); ctx.fill();
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- SLIDE INTERFACE ATOMIC ENGINE ---
+        function setupTouchOverlays() {
+            const tl = document.getElementById('touch-layer'); tl.innerHTML = '';
+            touchZones = [];
+            if(settings.controlMode === 'normal') { tl.style.display = 'none'; return; }
+            tl.style.display = 'block';
+            
+            const w = canvas.width, h = canvas.height;
+            let hitBarY = h * settings.trackLength;
+
+            let laneWidthTarget = 75;
+            let totalTrackWidth = laneWidthTarget * 5;
+            let targetTrackLeft = (w - totalTrackWidth) / 2;
+
+            if(settings.controlMode === 'ipad') {
+                // Fixed iPad Math tracking segments inside the perspective projection boundaries directly
+                for(let i=0; i<5; i++) {
+                    let laneLeft = targetTrackLeft + i*laneWidthTarget;
+                    touchZones.push({
+                        type: 'rect',
+                        x: laneLeft, 
+                        y: hitBarY - 50, 
+                        w: laneWidthTarget, 
+                        h: 150, 
+                        lane: i
+                    });
+                }
+                createSpTouchBtn(w * 0.44, h * 0.15, 65, 65);
+
+            } else if(settings.controlMode === 'ff') {
+                // Horizontal Fortnite Festival Layout Config (L1, L2 on Left of track base, R1, R2, R3 on Right of track base)
+                let horizBtnW = (targetTrackLeft - 20) / 2;
+                if(horizBtnW > 110) horizBtnW = 110;
+                let horizBtnH = 65;
+                let bottomY = hitBarY - 20;
+
+                // Left Side Horizontal Elements
+                touchZones.push({ x: targetTrackLeft - (horizBtnW * 2) - 10, y: bottomY, w: horizBtnW, h: horizBtnH, lane: 0, label: "L1" });
+                touchZones.push({ x: targetTrackLeft - horizBtnW - 5, y: bottomY, w: horizBtnW, h: horizBtnH, lane: 1, label: "L2" });
+                
+                // Right Side Horizontal Elements
+                touchZones.push({ x: targetTrackLeft + totalTrackWidth + 5, y: bottomY, w: horizBtnW, h: horizBtnH, lane: 2, label: "R1" });
+                touchZones.push({ x: targetTrackLeft + totalTrackWidth + horizBtnW + 10, y: bottomY, w: horizBtnW, h: horizBtnH, lane: 3, label: "R2" });
+                touchZones.push({ x: targetTrackLeft + totalTrackWidth + (horizBtnW * 2) + 15, y: bottomY, w: horizBtnW, h: horizBtnH, lane: 4, label: "R3" });
+
+                touchZones.forEach(z => {
+                    const b = document.createElement('div'); b.className = `touch-btn fret-${z.lane}`;
+                    b.style.left = `${z.x}px`; b.style.top = `${z.y}px`; b.style.width = `${z.w}px`; b.style.height = `${z.h}px`;
+                    b.innerText = z.label; b.style.display = "flex"; b.style.alignItems = "center";
+                    b.style.justifyContent = "center"; b.style.fontWeight = "bold"; b.style.color = "#000";
+                    tl.appendChild(b);
+                });
+
+                let strumW = totalTrackWidth * 0.6;
+                createTouchBtn((w - strumW)/2, h - 75, strumW, 55, 'strum-btn', 'strumUp', "STRUM BAR");
+                createSpTouchBtn(w * 0.46, 15, 60, 60);
+            }
+
+            // Universal Interlocking Slide Processing Core Loop 
+            const processTouchFrame = (e) => {
+                e.preventDefault();
+                let currentTouchedLanes = [false, false, false, false, false];
+                let rect = canvas.getBoundingClientRect();
+                
+                for(let t of e.touches) {
+                    let tx = t.clientX - rect.left;
+                    let ty = t.clientY - rect.top;
+
+                    if(settings.controlMode === 'ipad') {
+                        // For perspective view, inverse pull screen input coordinates back to track linear index segments
+                        if(ty >= hitBarY - 120 && ty <= hitBarY + 100) {
+                            let centerWidth = w / 2;
+                            let progress = ty / h;
+                            let perspectiveFactor = 0.35 + (progress * 0.65);
+                            let unprojectedX = centerWidth + (tx - centerWidth) / perspectiveFactor;
+                            let laneIdx = Math.floor((unprojectedX - targetTrackLeft) / laneWidthTarget);
+                            if(laneIdx >= 0 && laneIdx <= 4) {
+                                currentTouchedLanes[laneIdx] = true;
+                            }
+                        }
+                    } else {
+                        // Standard Bounding-Box checks for static interface configurations
+                        for(let zone of touchZones) {
+                            if(tx >= zone.x && tx <= zone.x + zone.w && ty >= zone.y && ty <= zone.y + zone.h) {
+                                currentTouchedLanes[zone.lane] = true;
+                            }
+                        }
+                    }
+                }
+
+                for(let i=0; i<5; i++) {
+                    if(currentTouchedLanes[i] && !activeKeys[i]) {
+                        activeKeys[i] = true;
+                        if(settings.gamepadMode) checkNoteHit(i);
+                    } else if(!currentTouchedLanes[i] && activeKeys[i]) {
+                        activeKeys[i] = false;
+                        if(currentSustainNotes[i]) currentSustainNotes[i] = null;
+                    }
+                }
+            };
+
+            tl.addEventListener('touchstart', processTouchFrame, {passive: false});
+            tl.addEventListener('touchmove', processTouchFrame, {passive: false});
+            tl.addEventListener('touchend', processTouchFrame, {passive: false});
+            tl.addEventListener('touchcancel', processTouchFrame, {passive: false});
+        }
+
+        function createTouchBtn(x, y, w, h, cls, action, lbl="") {
+            const b = document.createElement('div'); b.className = `touch-btn ${cls}`;
+            b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.width = `${w}px`; b.style.height = `${h}px`;
+            if(lbl) b.innerText = lbl;
+            b.addEventListener('touchstart', (e) => { e.preventDefault(); handleStrum(); });
+            document.getElementById('touch-layer').appendChild(b);
+        }
+
+        function createSpTouchBtn(x, y, w, h) {
+            const b = document.createElement('div'); b.className = 'touch-btn sp-touch-btn';
+            b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.width = `${w}px`; b.style.height = `${h}px`;
+            b.innerText = "S.P.";
+            b.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if(starPowerAmount >= 50 && !starPowerActive) {
+                    starPowerActive = true;
+                    starPowerEndTime = audioCtx.currentTime - startTime + (starPowerAmount / 12);
+                    starPowerAmount = 0;
+                }
+            });
+            document.getElementById('touch-layer').appendChild(b);
+        }
+
+        function returnToMenu() {
+            isPlaying = false; if(audioSource) { try { audioSource.stop(); } catch(e){} }
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+            showLoading(false);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Street Lurking: 3D Ultimate Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* --- Scaling Wrapper (Twin of 2D) --- */
+        #scaling-wrapper {
+            width: 850px;
+            height: 500px;
+            position: relative;
+            transform-origin: center center;
+            flex-shrink: 0;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #050505 70%, #222 100%);
+            border: 4px solid #ff3333;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(255, 51, 51, 0.4);
+        }
+        
+        #viewport-3d {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            perspective: 500px;
+            perspective-origin: 50% 40%;
+        }
+
+        #camera-tilt-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .head-down #camera-tilt-overlay {
+            transform: rotateX(-15deg) translateY(80px);
+        }
+
+        /* --- Environment --- */
+        .road-3d {
+            position: absolute;
+            bottom: -300px;
+            left: 50%;
+            width: 400px;
+            height: 1500px;
+            background: linear-gradient(to top, #151515 20%, #0a0a0a 80%);
+            transform: translateX(-50%) rotateX(85deg);
+            transform-origin: center bottom;
+            border-left: 6px dashed #444;
+            border-right: 6px dashed #444;
+        }
+
+        /* --- HUD & UI (Synced with 2D Features) --- */
+        #hud-phone-wrapper {
+            position: absolute;
+            bottom: -220px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 320px;
+            height: 380px;
+            background: #111;
+            border: 6px solid #333;
+            border-radius: 24px 24px 0 0;
+            transition: bottom 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 5;
+            padding: 15px;
+        }
+        .head-down #hud-phone-wrapper { bottom: -40px; border-color: #00ffff; box-shadow: 0 0 50px rgba(0, 255, 255, 0.3); }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+            text-transform: uppercase;
+        }
+        .ui-element {
+            background: rgba(0, 0, 0, 0.85);
+            padding: 6px 14px;
+            border-radius: 4px;
+            border: 1px solid #ff3333;
+            font-weight: bold;
+        }
+        #mode-indicator { border-color: #a855f7; color: #c084fc; }
+
+        /* --- 3D Threats --- */
+        #spawn-layer-3d {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+        .threat-3d {
+            position: absolute;
+            top: 210px;
+            left: 50%;
+            transform-style: preserve-3d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            will-change: transform;
+        }
+        .label-3d {
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            padding: 3px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        .sprite-opp-whip { width: 130px; height: 55px; background: #111; border: 3px solid #ff3333; }
+        .sprite-fed-car { width: 140px; height: 60px; background: #002266; border: 3px solid #3388ff; }
+        .siren-light {
+            position: absolute; top: -12px; left: 55px; width: 30px; height: 10px;
+            animation: flash 0.15s infinite alternate;
+        }
+        @keyframes flash { from { background: #ff0000; box-shadow: 0 0 20px #ff0000; } to { background: #0033ff; box-shadow: 0 0 20px #0033ff; } }
+
+        /* --- Menus & Buttons --- */
+        #menu, #game-over, #pause-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 5, 0.98); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 20; text-align: center; padding: 20px;
+        }
+        h1 { color: #ff3333; font-size: 36px; text-shadow: 2px 2px #000; }
+        .mix-title { color: #a855f7; }
+        button {
+            background: #222; color: white; border: 2px solid #555;
+            padding: 10px 20px; margin: 5px; cursor: pointer; text-transform: uppercase; border-radius: 4px;
+            transition: 0.2s;
+        }
+        button:hover { background: #ff3333; border-color: #fff; }
+        button.active-btn { background: #a855f7; border-color: #fff; box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="scaling-wrapper">
+        <div id="game-container">
+            <div id="viewport-3d">
+                <div id="camera-tilt-overlay">
+                    <div class="road-3d"></div>
+                    <div id="spawn-layer-3d"></div>
+                </div>
+            </div>
+
+            <div id="hud-phone-wrapper">
+                <div style="color:#00ffff; text-align:center;">
+                    <p style="font-weight: bold; font-size: 12px;">ENCRYPTED CHAT</p>
+                    <div id="phone-status" style="font-size: 18px; margin-top: 10px;">LOCKED</div>
+                </div>
+            </div>
+
+            <div id="ui-layer">
+                <div class="ui-element" id="mode-indicator">MODE: HYBRID 3D</div>
+                <div class="ui-element">Cred: <span id="score-val">0</span></div>
+                <div class="ui-element" id="pause-btn" style="cursor:pointer;">PAUSE</div>
+            </div>
+
+            <div id="menu">
+                <h1>STREET LURKING <span class="mix-title">3D</span></h1>
+                <h2 style="font-size: 16px; color: #ccc; margin-bottom: 20px;">The 3D Paranoia Update</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="btn-original" onclick="selectMode('original')">Original</button>
+                    <button id="btn-forced" onclick="selectMode('forced')">Forced</button>
+                    <button id="btn-hybrid" class="active-btn" onclick="selectMode('hybrid')">Hybrid</button>
+                </div>
+                <button style="background:#a855f7; border-color: #fff;" onclick="launchGame()">Step on the Block</button>
+            </div>
+
+            <div id="pause-menu" style="display:none;">
+                <h1>PAUSED</h1>
+                <button style="background: #00ff00; color: #000;" onclick="togglePause()">Resume</button>
+                <button style="background: #ff3333;" onclick="exitToMenu()">Main Menu</button>
+            </div>
+
+            <div id="game-over" style="display:none;">
+                <h1 id="over-title">CAUGHT LACKING!</h1>
+                <p id="over-desc" style="margin: 15px 0; max-width: 500px;"></p>
+                <p style="font-size: 18px; font-weight: bold;">Street Cred: <span id="final-score">0</span></p>
+                <button style="background:#a855f7;" onclick="launchGame()">Spin Back</button>
+                <button style="background:#444;" onclick="exitToMenu()">Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wrapper = document.getElementById('scaling-wrapper');
+        const gameContainer = document.getElementById('game-container');
+        const viewport = document.getElementById('viewport-3d');
+        const spawnLayer = document.getElementById('spawn-layer-3d');
+        const scoreVal = document.getElementById('score-val');
+        const pauseMenu = document.getElementById('pause-menu');
+        const gameOverScreen = document.getElementById('game-over');
+        const modeIndicator = document.getElementById('mode-indicator');
+        
+        let score = 0, isLacking = false, gameActive = false, isPaused = false;
+        let selectedMode = 'hybrid', activeThreats = [], spawnTimer, gameLoopTimer, loops = 0;
+
+        // --- Responsive Scaling ---
+        function resize() {
+            const scale = Math.min(window.innerWidth / 850, window.innerHeight / 500);
+            wrapper.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- Universal Input (Touch/Pointer + Keyboard) ---
+        const startLacking = (e) => { 
+            if(gameActive && !isPaused && e.target.tagName !== 'BUTTON' && e.target.id !== 'pause-btn') {
+                e.preventDefault(); setLacking(true); 
+            }
+        };
+        const stopLacking = () => setLacking(false);
+
+        gameContainer.addEventListener('pointerdown', startLacking);
+        window.addEventListener('pointerup', stopLacking);
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') startLacking(e); });
+        window.addEventListener('keyup', (e) => { if(e.code === 'Space') stopLacking(); });
+        document.getElementById('pause-btn').addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
+
+        function setLacking(state) {
+            isLacking = state;
+            if(state) viewport.classList.add('head-down');
+            else viewport.classList.remove('head-down');
+            document.getElementById('phone-status').textContent = state ? "RECEIVING..." : "LOCKED";
+            document.getElementById('phone-status').style.color = state ? "#00ffff" : "#ff3333";
+        }
+
+        function selectMode(m) {
+            selectedMode = m;
+            document.querySelectorAll('#menu button').forEach(b => b.classList.remove('active-btn'));
+            document.getElementById(`btn-${m}`).classList.add('active-btn');
+        }
+
+        function togglePause() {
+            if(!gameActive) return;
+            isPaused = !isPaused;
+            pauseMenu.style.display = isPaused ? 'flex' : 'none';
+            if(!isPaused) { tick(); scheduleSpawn(); }
+            else { clearTimeout(spawnTimer); cancelAnimationFrame(gameLoopTimer); }
+        }
+
+        function launchGame() {
+            score = 0; gameActive = true; isPaused = false; loops = 0;
+            activeThreats.forEach(t => t.element.remove());
+            activeThreats = [];
+            document.getElementById('menu').style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            pauseMenu.style.display = 'none';
+            scoreVal.textContent = '0';
+            modeIndicator.textContent = `MODE: ${selectedMode.toUpperCase()} 3D`;
+            setLacking(false);
+            tick();
+            scheduleSpawn();
+        }
+
+        function scheduleSpawn() {
+            if(!gameActive || isPaused) return;
+            let interval = Math.max(500, 2200 - (score * 30));
+            spawnTimer = setTimeout(() => {
+                spawn3D();
+                scheduleSpawn();
+            }, Math.random() * interval + 400);
+        }
+
+        function spawn3D() {
+            const el = document.createElement('div');
+            el.className = 'threat-3d';
+            
+            let roll = selectedMode === 'hybrid' ? (Math.random() > 0.5 ? 'red' : 'blue') : (selectedMode === 'original' ? 'red' : 'blue');
+            let threat = { element: el, z: -850, speed: Math.random() * 3 + 6, state: roll === 'red' ? 'up' : 'down', laneX: Math.random() > 0.5 ? 95 : -95 };
+
+            if (roll === 'red') {
+                el.innerHTML = `<div class="label-3d" style="color:#ff3333;">🛑 LOOK UP</div><div class="sprite-opp-whip"></div>`;
+                threat.laneX = 0; // Cars take center road
+            } else {
+                el.innerHTML = `<div class="label-3d" style="color:#00ffff;">⚡ STAY LACKING</div><div class="sprite-fed-car"><div class="siren-light"></div></div>`;
+                threat.laneX = 0;
+            }
+
+            el.style.transform = `translateX(${threat.laneX}px) translateZ(${threat.z}px)`;
+            spawnLayer.appendChild(el);
+            activeThreats.push(threat);
+        }
+
+        function tick() {
+            if(!gameActive || isPaused) return;
+            loops++;
+            if(isLacking && loops % 60 === 0) { score++; scoreVal.textContent = score; }
+
+            // Collision Overlap (Hybrid Logic)
+            for(let i = 0; i < activeThreats.length; i++) {
+                for(let j = i + 1; j < activeThreats.length; j++) {
+                    let a = activeThreats[i], b = activeThreats[j];
+                    if(a.state !== b.state && Math.abs(a.z - b.z) < 60) {
+                        a.element.remove(); b.element.remove();
+                        activeThreats.splice(j, 1); activeThreats.splice(i, 1);
+                        return tick();
+                    }
+                }
+            }
+
+            for(let i = activeThreats.length-1; i >= 0; i--) {
+                let t = activeThreats[i];
+                t.z += t.speed;
+                t.element.style.transform = `translateX(${t.laneX}px) translateZ(${t.z}px)`;
+
+                // Hit Detection Zone (Z-Depth)
+                if(t.z > -90 && t.z < 40) {
+                    if(t.state === 'up' && isLacking) return endGame("Caught Lacking!", `The opps spun the block while you were on your phone.`);
+                    if(t.state === 'down' && !isLacking) return endGame("Cover Blown!", `You looked up and the feds spotted your face.`);
+                    t.element.style.opacity = '0.3';
+                }
+
+                if(t.z > 150) { t.element.remove(); activeThreats.splice(i, 1); }
+            }
+            gameLoopTimer = requestAnimationFrame(tick);
+        }
+
+        function endGame(title, desc) {
+            gameActive = false;
+            cancelAnimationFrame(gameLoopTimer);
+            clearTimeout(spawnTimer);
+            document.getElementById('over-title').textContent = title;
+            document.getElementById('over-desc').textContent = desc;
+            document.getElementById('final-score').textContent = score;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function exitToMenu() {
+            gameActive = false;
+            gameOverScreen.style.display = 'none';
+            pauseMenu.style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            activeThreats.forEach(t => t.element.remove());
+            activeThreats = [];
+        }
+    </script>
+</body>
+</html>
